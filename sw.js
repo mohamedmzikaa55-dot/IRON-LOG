@@ -1,5 +1,5 @@
 // Iron Log service worker — offline app shell. Bump VERSION to refresh.
-const VERSION = 'iron-log-v1';
+const VERSION = 'iron-log-v2';
 const ASSETS = [
   './',
   './index.html',

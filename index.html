@@ -501,6 +501,14 @@
   .week-day.rest { background: var(--surface-2); }
   .week-day.rest .wdot { background: var(--text-dim); }
   .week-day.today { border-color: var(--accent); border-width: 1.5px; }
+  .set-card { border: 1px solid var(--border); background: var(--surface); border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; box-shadow: var(--shadow); }
+  .set-card h3 { font-size: 15px; margin: 0 0 4px; font-family: 'Oswald', system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.02em; }
+  .set-card .d { font-size: 12.5px; color: var(--text-dim); line-height: 1.5; margin-bottom: 10px; }
+  .set-rowline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .folder-pill { font-size: 12.5px; font-weight: 700; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .backup-row { display: flex; gap: 8px; align-items: center; border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; }
+  .backup-row .bn { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .backup-row .bd { font-size: 11px; color: var(--text-dim); flex: none; }
 
   .empty {
     padding: 60px 20px;
@@ -680,6 +688,7 @@
       <button data-tab="library" class="active">📚 Library</button>
       <button data-tab="plans">📋 Plans</button>
       <button data-tab="calendar">🗓 Calendar</button>
+      <button data-tab="settings">&#9881; Settings</button>
     </nav>
 
     <nav class="cats" id="catTabs" aria-label="Workout categories"></nav>
@@ -1071,7 +1080,7 @@
   var pendingSetRows = [{weight:"", reps:""}];
   var pendingImportPayload = null;
 
-  var mainTab = "library"; // library | plans | calendar
+  var mainTab = "library"; // library | plans | calendar | settings
   var librarySortBy = "name";
   var libraryGroupBy = "none";
   var editingPlanId = null;
@@ -1296,6 +1305,7 @@
     if (mainTab === "library"){ renderTabs(); renderLibrary(); }
     else if (mainTab === "plans"){ renderPlans(); }
     else if (mainTab === "calendar"){ renderCalendar(); }
+    else if (mainTab === "settings"){ renderSettings(); }
   }
 
   document.querySelectorAll("#mainNav button").forEach(function(btn){
@@ -2250,30 +2260,291 @@
   // ---------- add category button in header ----------
   document.getElementById("addCatBtn").addEventListener("click", openCategoryAdd);
 
+  // ==================== SETTINGS / BACKUP FOLDER / INSTALL ====================
+  var backupDirHandle = null;
+  var backupDirStatus = "boot"; // unsupported | unset | prompt | granted | denied
+  var deferredInstallPrompt = null;
+
+  function fsAccessSupported(){ return typeof window.showDirectoryPicker === "function"; }
+
+  function idbDb(){
+    return new Promise(function(resolve, reject){
+      var req = indexedDB.open("ironlog-pwa", 1);
+      req.onupgradeneeded = function(){ req.result.createObjectStore("kv"); };
+      req.onsuccess = function(){ resolve(req.result); };
+      req.onerror = function(){ reject(req.error); };
+    });
+  }
+  function idbGet(key){
+    return idbDb().then(function(db){
+      return new Promise(function(resolve, reject){
+        var rq = db.transaction("kv", "readonly").objectStore("kv").get(key);
+        rq.onsuccess = function(){ resolve(rq.result); };
+        rq.onerror = function(){ reject(rq.error); };
+      });
+    });
+  }
+  function idbSet(key, val){
+    return idbDb().then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction("kv", "readwrite");
+        tx.objectStore("kv").put(val, key);
+        tx.oncomplete = function(){ resolve(); };
+        tx.onerror = function(){ reject(tx.error); };
+      });
+    });
+  }
+  function idbDel(key){
+    return idbDb().then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction("kv", "readwrite");
+        tx.objectStore("kv").delete(key);
+        tx.oncomplete = function(){ resolve(); };
+        tx.onerror = function(){ reject(tx.error); };
+      });
+    });
+  }
+
+  function refreshBackupDir(){
+    if (!fsAccessSupported()){ backupDirStatus = "unsupported"; return Promise.resolve(); }
+    if (typeof indexedDB === "undefined"){ backupDirStatus = "unsupported"; return Promise.resolve(); }
+    return idbGet("backupDir").then(function(h){
+      backupDirHandle = h || null;
+      if (!backupDirHandle){ backupDirStatus = "unset"; return; }
+      return backupDirHandle.queryPermission({ mode: "readwrite" }).then(function(perm){
+        backupDirStatus = (perm === "granted") ? "granted" : "prompt";
+      }).catch(function(){ backupDirStatus = "prompt"; });
+    }).catch(function(){ backupDirHandle = null; backupDirStatus = "unset"; });
+  }
+
+  function chooseBackupFolder(){
+    if (!fsAccessSupported()){ showToast("Folder access needs Chrome or Edge"); return; }
+    window.showDirectoryPicker({ id: "ironlog-backup", mode: "readwrite" }).then(function(h){
+      return idbSet("backupDir", h).then(function(){
+        backupDirHandle = h;
+        backupDirStatus = "granted";
+        showToast("Backup folder set");
+        renderSettings();
+      });
+    }).catch(function(e){
+      if (!(e && e.name === "AbortError")) showToast("Couldn't open that folder");
+    });
+  }
+
+  function forgetBackupFolder(){
+    idbDel("backupDir").then(function(){
+      backupDirHandle = null;
+      backupDirStatus = "unset";
+      showToast("Backup folder removed");
+      renderSettings();
+    }).catch(function(){ showToast("Couldn't remove folder"); });
+  }
+
+  function grantBackupAccess(){
+    if (!backupDirHandle) return;
+    backupDirHandle.requestPermission({ mode: "readwrite" }).then(function(perm){
+      backupDirStatus = (perm === "granted") ? "granted" : "denied";
+      showToast(perm === "granted" ? "Folder access granted" : "Access denied");
+      renderSettings();
+    }).catch(function(){ backupDirStatus = "denied"; renderSettings(); });
+  }
+
+  function listFolderBackups(){
+    if (backupDirStatus !== "granted" || !backupDirHandle) return Promise.resolve([]);
+    return new Promise(function(resolve){
+      var out = [];
+      var iter = backupDirHandle.values();
+      function next(){
+        iter.next().then(function(r){
+          if (r.done){
+            out.sort(function(a, b){ return b.modified - a.modified; });
+            resolve(out);
+            return;
+          }
+          var v = r.value;
+          if (v && v.kind === "file" && /\.json$/i.test(v.name)){
+            v.getFile().then(function(f){
+              out.push({ name: v.name, modified: f.lastModified });
+              next();
+            }).catch(next);
+          } else { next(); }
+        }).catch(function(){ resolve(out); });
+      }
+      next();
+    });
+  }
+
+  function restoreBackupFile(name){
+    if (!backupDirHandle) return;
+    backupDirHandle.getFileHandle(name).then(function(fh){ return fh.getFile(); }).then(function(f){
+      return f.text();
+    }).then(function(text){
+      try { handleImportObject(JSON.parse(text), name); }
+      catch(e){ showToast("That file doesn't look like a valid Iron Log backup."); }
+    }).catch(function(){ showToast("Couldn't read that backup"); });
+  }
+
+  function backupFolderStatusText(){
+    if (backupDirStatus === "unsupported") return "Folder picking needs Chrome/Edge (this browser can't choose folders)";
+    if (backupDirStatus === "unset") return "No folder chosen yet";
+    if (backupDirStatus === "prompt") return "Tap Choose folder to allow access again";
+    if (backupDirStatus === "denied") return "Access was denied — choose the folder again";
+    if (backupDirStatus === "granted" && backupDirHandle) return "Folder: " + backupDirHandle.name;
+    return "Checking…";
+  }
+
+  function installApp(){
+    if (!deferredInstallPrompt){ showToast("Use the browser menu to install"); return; }
+    var p = deferredInstallPrompt;
+    p.prompt();
+    if (p.userChoice && p.userChoice.then){
+      p.userChoice.then(function(choice){
+        if (choice && choice.outcome === "accepted") showToast("Installing Iron Log…");
+        deferredInstallPrompt = null;
+        if (mainTab === "settings") renderSettings();
+      }).catch(function(){ deferredInstallPrompt = null; });
+    }
+  }
+  window.addEventListener("beforeinstallprompt", function(e){
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    if (mainTab === "settings") renderSettings();
+  });
+  window.addEventListener("appinstalled", function(){
+    deferredInstallPrompt = null;
+    showToast("Iron Log installed");
+    if (mainTab === "settings") renderSettings();
+  });
+
+  function renderSettings(){
+    var main = document.getElementById("mainArea");
+    main.innerHTML = "";
+    var wrap = document.createElement("div");
+
+    var inst = document.createElement("div");
+    inst.className = "set-card";
+    var already = window.matchMedia && window.matchMedia("(display-mode: standalone)").matches;
+    var instInner = "<h3>Install app</h3>" +
+      "<div class='d'>Put Iron Log on your home screen for fullscreen offline use. The app must be opened over http://localhost or https — it cannot install from a file:// page.</div>" +
+      "<div class='set-rowline'>";
+    if (already) instInner += "<span class='folder-pill'>Installed — running as app</span>";
+    else if (deferredInstallPrompt) instInner += "<button class='btn primary' id='setInstallBtn'>Install Iron Log</button>";
+    else instInner += "<span class='folder-pill'>Browser menu \u2192 Install / Add to Home Screen</span>";
+    instInner += "</div>";
+    inst.innerHTML = instInner;
+    wrap.appendChild(inst);
+    var installBtn = inst.querySelector("#setInstallBtn");
+    if (installBtn) installBtn.addEventListener("click", installApp);
+
+    var bc = document.createElement("div");
+    bc.className = "set-card";
+    bc.innerHTML = "<h3>Backup folder on this device</h3>" +
+      "<div class='d'>Pick a folder once. Exports then save straight into it, and every backup in it can be restored below. (Chrome/Edge; needs http://localhost or https.)</div>" +
+      "<div class='set-rowline'><span class='folder-pill'>" + esc(backupFolderStatusText()) + "</span></div>" +
+      "<div class='set-rowline' style='margin-top:8px;'>" +
+        (backupDirStatus === "prompt"
+          ? "<button class='btn primary' id='grantFolderBtn'>Allow access</button>"
+          : "<button class='btn' id='chooseFolderBtn'>Choose folder</button>") +
+        (backupDirHandle ? "<button class='btn ghost' id='forgetFolderBtn'>Remove</button>" : "") +
+        "<button class='btn primary' id='setExportBtn'>Export backup now</button>" +
+      "</div>" +
+      "<div id='folderBackupList' style='margin-top:10px;'></div>";
+    wrap.appendChild(bc);
+    var chooseBtn = bc.querySelector("#chooseFolderBtn");
+    if (chooseBtn) chooseBtn.addEventListener("click", chooseBackupFolder);
+    var grantBtn = bc.querySelector("#grantFolderBtn");
+    if (grantBtn) grantBtn.addEventListener("click", grantBackupAccess);
+    var forgetBtn = bc.querySelector("#forgetFolderBtn");
+    if (forgetBtn) forgetBtn.addEventListener("click", forgetBackupFolder);
+    bc.querySelector("#setExportBtn").addEventListener("click", exportBackup);
+    main.appendChild(wrap);
+    refreshFolderBackupList();
+  }
+
+  function refreshFolderBackupList(){
+    var host = document.getElementById("folderBackupList");
+    if (!host) return;
+    function fileFallback(){
+      host.innerHTML = "<div class='set-rowline'><button class='btn ghost' id='importFileBtn'>Import from a file instead</button></div>";
+      host.querySelector("#importFileBtn").addEventListener("click", function(){ document.getElementById("importFile").click(); });
+    }
+    if (backupDirStatus !== "granted" || !backupDirHandle){ fileFallback(); return; }
+    host.innerHTML = "<div class='d'>Loading backups…</div>";
+    listFolderBackups().then(function(files){
+      if (!document.getElementById("folderBackupList")) return;
+      if (!files.length){
+        host.innerHTML = "<div class='d'>Folder is empty — press Export backup now to create the first backup.</div>";
+      } else {
+        host.innerHTML = files.map(function(f, i){
+          return "<div class='backup-row'><span class='bn'>" + esc(f.name) + "</span>" +
+            "<span class='bd'>" + esc(new Date(f.modified).toLocaleDateString()) + "</span>" +
+            "<button class='btn small' data-i='" + i + "'>Restore</button></div>";
+        }).join("");
+        host.querySelectorAll("button[data-i]").forEach(function(btn){
+          btn.addEventListener("click", function(){
+            restoreBackupFile(files[Number(btn.getAttribute("data-i"))].name);
+          });
+        });
+      }
+      var more = document.createElement("div");
+      more.className = "set-rowline";
+      more.style.marginTop = "8px";
+      more.innerHTML = "<button class='btn ghost' id='importFileBtn2'>Import from a file instead</button>";
+      host.appendChild(more);
+      more.querySelector("#importFileBtn2").addEventListener("click", function(){ document.getElementById("importFile").click(); });
+    });
+  }
+
   // ---------- export (JSON backup) ----------
   // Browsers can't write to a fixed folder silently, so Export opens a real
   // "Save as" dialog (Chrome/Edge) where YOU pick the backup folder + name.
   // Other browsers fall back to a normal download (Downloads folder, or the
   // browser asks where to save if you enabled that in its settings).
   // Import lets you browse back to that same folder to restore.
-  document.getElementById("exportBtn").addEventListener("click", async function(){
+  document.getElementById("exportBtn").addEventListener("click", function(){ exportBackup(); });
+
+  function backupFileName(){ return "iron-log-backup-" + todayStr() + ".json"; }
+
+  function exportBackup(){
     var payload = JSON.stringify(state, null, 2);
-    var filename = "iron-log-backup-" + todayStr() + ".json";
-    if (window.showSaveFilePicker){
-      try {
-        var handle = await window.showSaveFilePicker({
-          suggestedName: filename,
-          types: [{ description: "Iron Log JSON backup", accept: { "application/json": [".json"] } }]
-        });
-        var writable = await handle.createWritable();
-        await writable.write(payload);
-        await writable.close();
-        showToast("Backup saved — import from that same folder to restore");
-        return;
-      } catch(e){
-        if (e && e.name === "AbortError") return;
-      }
+    var filename = backupFileName();
+    if (backupDirStatus === "granted" && backupDirHandle){
+      backupDirHandle.getFileHandle(filename, { create: true }).then(function(fh){
+        return fh.createWritable();
+      }).then(function(writable){
+        return writable.write(payload).then(function(){ return writable.close(); });
+      }).then(function(){
+        showToast("Backup saved to your folder");
+        if (mainTab === "settings") renderSettings();
+      }).catch(function(){
+        exportViaDialog(payload, filename);
+      });
+      return;
     }
+    exportViaDialog(payload, filename);
+  }
+
+  function exportViaDialog(payload, filename){
+    if (window.showSaveFilePicker){
+      window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{ description: "Iron Log JSON backup", accept: { "application/json": [".json"] } }]
+      }).then(function(handle){
+        return handle.createWritable();
+      }).then(function(writable){
+        return writable.write(payload).then(function(){ return writable.close(); });
+      }).then(function(){
+        showToast("Backup saved — import from that same folder to restore");
+      }).catch(function(e){
+        if (e && e.name === "AbortError") return;
+        exportViaDownload(payload, filename);
+      });
+      return;
+    }
+    exportViaDownload(payload, filename);
+  }
+
+  function exportViaDownload(payload, filename){
     try {
       var blob = new Blob([payload], { type: "application/json" });
       var url = URL.createObjectURL(blob);
@@ -2287,19 +2558,45 @@
     } catch(e2){
       showToast("Export failed in this browser.");
     }
-  });
+  }
+
 
   // ---------- import ----------
   var importFileInput = document.getElementById("importFile");
   document.getElementById("importBtn").addEventListener("click", function(){ importFileInput.click(); });
+  function handleImportObject(parsed, fileName){
+    if (!parsed || !Array.isArray(parsed.categories)) throw new Error("bad shape");
+    parsed.categories.forEach(function(c){
+      if (!c.id) c.id = uid();
+      if (!Array.isArray(c.exercises)) c.exercises = [];
+      c.exercises.forEach(function(e){
+        if (!e.id) e.id = uid();
+        if (!Array.isArray(e.purposes)) e.purposes = [];
+        if (!Array.isArray(e.logs)) e.logs = [];
+        e.muscle = normalizeMuscles(e.muscle);
+        e.logs.forEach(function(l){ if (!l.id) l.id = uid(); if (!Array.isArray(l.sets)) l.sets = []; });
+      });
+    });
+    if (!Array.isArray(parsed.plans)) parsed.plans = [];
+    parsed.plans.forEach(function(pl){
+      if (!pl.id) pl.id = uid();
+      if (!Array.isArray(pl.items)) pl.items = [];
+    });
+    if (!Array.isArray(parsed.schedule)) parsed.schedule = [];
+    parsed.schedule.forEach(function(sch){ if (!sch.id) sch.id = uid(); });
+    if (!parsed.weights || typeof parsed.weights !== "object") parsed.weights = {};
+    if (!Array.isArray(parsed.restDays)) parsed.restDays = [];
+    pendingImportPayload = parsed;
+    document.getElementById("importFileName").textContent = fileName;
+    openOverlay("importOverlay");
+  }
   importFileInput.addEventListener("change", function(){
     var file = importFileInput.files[0];
     if (!file) return;
     var reader = new FileReader();
     reader.onload = function(){
       try {
-        var parsed = JSON.parse(reader.result);
-        if (!parsed || !Array.isArray(parsed.categories)) throw new Error("bad shape");
+        handleImportObject(JSON.parse(reader.result), file.name);
         parsed.categories.forEach(function(c){
           if (!c.id) c.id = uid();
           if (!Array.isArray(c.exercises)) c.exercises = [];
@@ -2320,9 +2617,6 @@
         parsed.schedule.forEach(function(s){ if (!s.id) s.id = uid(); });
         if (!parsed.weights || typeof parsed.weights !== "object") parsed.weights = {};
         if (!Array.isArray(parsed.restDays)) parsed.restDays = [];
-        pendingImportPayload = parsed;
-        document.getElementById("importFileName").textContent = file.name;
-        openOverlay("importOverlay");
       } catch(e){
         showToast("That file doesn't look like a valid Iron Log backup.");
       }
@@ -2365,6 +2659,12 @@
         var idx = state.schedule.findIndex(function(s){ return s.id === incoming.id; });
         if (idx === -1) state.schedule.push(incoming); else state.schedule[idx] = incoming;
       });
+      state.weights = state.weights || {};
+      Object.keys(pendingImportPayload.weights || {}).forEach(function(k){ state.weights[k] = pendingImportPayload.weights[k]; });
+      state.restDays = state.restDays || [];
+      (pendingImportPayload.restDays || []).forEach(function(d){
+        if (state.restDays.indexOf(d) === -1) state.restDays.push(d);
+      });
     }
     activeCatId = state.categories.length ? state.categories[0].id : null;
     saveState();
@@ -2376,6 +2676,7 @@
 
   // ---------- init ----------
   render();
+  refreshBackupDir().then(function(){ if (mainTab === "settings") render(); });
 })();
 </script>
 <script>
