@@ -656,6 +656,69 @@
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
   }
+
+  /* ---------- Advanced timed session ---------- */
+  .adv-total-wrap {
+    background: var(--surface-2);
+    border-radius: 12px;
+    padding: 12px 14px;
+    text-align: center;
+    margin-bottom: 12px;
+  }
+  .adv-total-wrap .big-timer {
+    font-family: 'Oswald', system-ui, sans-serif;
+    font-size: 38px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+  .adv-total-wrap .real-times {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    font-weight: 600;
+  }
+  .adv-timers {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .adv-timer-box {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 6px;
+    text-align: center;
+    background: var(--surface);
+  }
+  .adv-timer-box .lbl { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
+  .adv-timer-box .val { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .adv-timer-box.active { border-color: var(--accent); background: var(--accent-soft); }
+  .adv-timer-box.rest-active { border-color: var(--good); background: var(--good-soft); }
+  @media (max-width: 480px) {
+    .adv-timers { grid-template-columns: 1fr 1fr 1fr; }
+    .adv-total-wrap .big-timer { font-size: 32px; }
+  }
+  .adv-ex-pos { font-size: 12px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+  .adv-ex-name { font-family: 'Oswald', system-ui, sans-serif; font-size: 21px; text-transform: uppercase; margin-bottom: 8px; }
+  .adv-set-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+  .adv-btn-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .adv-btn-grid .btn { flex: 1; justify-content: center; min-width: 140px; }
+  .adv-live-list { margin-top: 14px; }
+  .adv-live-row {
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid var(--border); border-radius: 9px;
+    padding: 8px 10px; margin-bottom: 6px; font-size: 13px;
+  }
+  .adv-live-row.current { border-color: var(--accent); background: var(--accent-soft); font-weight: 700; }
+  .adv-live-row.done { border-color: var(--good); }
+  .adv-live-row .st { margin-left: auto; font-size: 11.5px; color: var(--text-dim); font-weight: 700; white-space: nowrap; }
+  .adv-live-row.done .st { color: var(--good); }
+  .adv-summary-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+  .adv-summary-table th, .adv-summary-table td { border: 1px solid var(--border); padding: 7px 8px; text-align: left; }
+  .adv-summary-table th { background: var(--surface-2); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .adv-kv { display: flex; justify-content: space-between; font-size: 13.5px; padding: 6px 0; border-bottom: 1px dashed var(--border); }
+  .adv-kv b { font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -863,7 +926,8 @@
     </div>
     <div id="planDetailList"></div>
     <div class="sheet-actions">
-      <button type="button" class="btn primary" id="startPlanBtn">▶ Start plan</button>
+      <button type="button" class="btn primary" id="startPlanBtn">▶ Basic mode</button>
+      <button type="button" class="btn primary" id="startAdvBtn">⏱ Advanced mode</button>
       <button type="button" class="btn" id="scheduleThisPlanBtn">🗓 Schedule</button>
       <button type="button" class="btn" id="editThisPlanBtn">✎ Edit plan</button>
     </div>
@@ -907,6 +971,94 @@
       <h3 style="font-size:18px;margin-bottom:6px;">Session logged</h3>
       <p style="color:var(--text-dim);font-size:13.5px;margin:0 0 18px;">Nice work working through the plan.</p>
       <button type="button" class="btn primary" id="sessionFinishBtn">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Advanced timed session sheet -->
+<div class="overlay hidden" id="advOverlay">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="advTitle">
+    <div class="sheet-head">
+      <div>
+        <h2 id="advTitle">Advanced session</h2>
+        <div class="sub" id="advSub">Timed mode with sets &amp; rest</div>
+      </div>
+      <button class="close-x" data-close="advOverlay" aria-label="Close">✕</button>
+    </div>
+
+    <!-- Setup shown before Begin -->
+    <div id="advSetup">
+      <div class="field" style="margin-bottom:10px;">
+        <label for="advDate">Session date</label>
+        <input id="advDate" type="date">
+      </div>
+      <div class="field" style="margin-bottom:10px;">
+        <label for="advRestSec">Rest between sets (seconds)</label>
+        <input id="advRestSec" type="number" min="5" max="900" step="5" value="60">
+      </div>
+      <div class="field">
+        <label>Sets planned per exercise (you can do more or fewer)</label>
+        <div id="advSetsList"></div>
+      </div>
+      <div class="sheet-actions">
+        <button type="button" class="btn primary" id="advBeginBtn">⏱ Begin workout</button>
+        <button type="button" class="btn ghost" data-close="advOverlay">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Live workout shown after Begin -->
+    <div id="advLive" style="display:none;">
+      <div class="adv-total-wrap">
+        <div class="big-timer" id="advTotalTimer">00:00</div>
+        <div class="real-times" id="advStartTimeLine">Not started</div>
+      </div>
+
+      <div class="adv-timers">
+        <div class="adv-timer-box" id="advExBox"><div class="lbl">Exercise</div><div class="val" id="advExTimer">00:00</div></div>
+        <div class="adv-timer-box" id="advSetBox"><div class="lbl">Set</div><div class="val" id="advSetTimer">00:00</div></div>
+        <div class="adv-timer-box" id="advRestBox"><div class="lbl">Rest</div><div class="val" id="advRestTimer">--:--</div></div>
+      </div>
+
+      <div class="adv-ex-pos" id="advExPos"></div>
+      <div class="adv-ex-name" id="advExName"></div>
+      <div class="detail-tags" id="advTags"></div>
+      <a class="video-btn" id="advVideoBtn" href="#" target="_blank" rel="noopener noreferrer">▶ Watch how-to &amp; best practice</a>
+
+      <div class="adv-set-inputs">
+        <div><div class="set-row-label">Weight (kg/lb)</div><input id="advWeight" type="number" min="0" step="0.5" placeholder="60"></div>
+        <div><div class="set-row-label">Reps</div><input id="advReps" type="number" min="0" step="1" placeholder="8"></div>
+      </div>
+
+      <div class="adv-btn-grid">
+        <button type="button" class="btn primary" id="advStartSetBtn">▶ Start set</button>
+        <button type="button" class="btn primary" id="advFinishSetBtn" style="display:none;">✔ Finish set</button>
+        <button type="button" class="btn" id="advNextSetBtn" style="display:none;">➕ Start another set</button>
+        <button type="button" class="btn ghost" id="advResetBtn">⟳ Reset timers</button>
+      </div>
+      <div class="adv-btn-grid">
+        <button type="button" class="btn" id="advNextExBtn">Next exercise →</button>
+        <button type="button" class="btn danger-outline" id="advFinishBtn">■ Finish workout</button>
+      </div>
+
+      <div class="section-title">Workout progress</div>
+      <div class="adv-live-list" id="advLiveList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Advanced summary / brief sheet -->
+<div class="overlay hidden" id="advSummaryOverlay">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="advSummaryTitle">
+    <div class="sheet-head">
+      <div>
+        <h2 id="advSummaryTitle">Workout brief</h2>
+        <div class="sub" id="advSummarySub"></div>
+      </div>
+      <button class="close-x" data-close="advSummaryOverlay" aria-label="Close">✕</button>
+    </div>
+    <div id="advSummaryBody"></div>
+    <div class="sheet-actions">
+      <button type="button" class="btn primary" id="advSummaryDoneBtn">Done</button>
     </div>
   </div>
 </div>
@@ -1350,9 +1502,10 @@
           '<div class="tag-row">'+catTags+'</div>' +
           '<div class="last">'+validCount+' exercise'+(validCount===1?"":"s")+' in this plan</div>' +
         '</button>' +
-        '<div class="card-actions"><button type="button" class="btn small primary start-plan-card-btn">▶ Start plan</button></div>';
+        '<div class="card-actions"><button type="button" class="btn small primary start-plan-card-btn">▶ Basic</button><button type="button" class="btn small primary adv-plan-card-btn">⏱ Advanced</button></div>';
       card.querySelector(".card-btn").addEventListener("click", function(){ openPlanDetail(plan.id); });
       card.querySelector(".start-plan-card-btn").addEventListener("click", function(){ openPlanSession(plan.id); });
+      card.querySelector(".adv-plan-card-btn").addEventListener("click", function(){ openAdvSetup(plan.id); });
       grid.appendChild(card);
     });
     var addCard = document.createElement("button");
@@ -1585,6 +1738,331 @@
   document.getElementById("sessionFinishBtn").addEventListener("click", function(){
     closeOverlay("sessionOverlay");
     showToast("Great session — logged to your history.");
+  });
+
+  // ==================== ADVANCED TIMED SESSION ====================
+  // Basic mode = the guided session above (unchanged).
+  // Advanced mode = live tracking: Begin -> per-exercise sets with timers ->
+  // Rest timer between sets -> Reset -> Next exercise -> final brief with
+  // per-exercise periods + real start/finish times.
+  var adv = null;
+  var advTickInt = null;
+
+  function advFmt(sec){
+    sec = Math.max(0, Math.floor(sec || 0));
+    var m = Math.floor(sec / 60), s = sec % 60;
+    var h = Math.floor(m / 60);
+    function p(n){ return (n < 10 ? "0" : "") + n; }
+    if (h > 0) return h + ":" + p(m % 60) + ":" + p(s);
+    return p(m) + ":" + p(s);
+  }
+  function advClock(ts){
+    var d = new Date(ts);
+    function p(n){ return (n < 10 ? "0" : "") + n; }
+    return p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+  }
+  function advStopTick(){ if (advTickInt){ clearInterval(advTickInt); advTickInt = null; } }
+
+  function openAdvSetup(planId){
+    var plan = state.plans.find(function(p){ return p.id === planId; });
+    if (!plan) return;
+    var resolved = plan.items.map(resolvePlanItem).filter(Boolean);
+    if (!resolved.length){ showToast("This plan has no exercises left to run — edit it first."); return; }
+    adv = {
+      planId: planId,
+      planName: plan.name,
+      date: todayStr(),
+      restSec: 60,
+      startStamp: null,
+      endStamp: null,
+      exIndex: 0,
+      setRunning: false,
+      setStart: null,
+      setSeconds: 0,
+      resting: false,
+      restLeft: 0,
+      finished: false,
+      exercises: resolved.map(function(r){
+        return { catId: r.cat.id, exId: r.ex.id, name: r.ex.name, catName: r.cat.name,
+                 ex: r.ex, cat: r.cat, plannedSets: 3, sets: [],
+                 exStart: null, exEnd: null, exSeconds: 0 };
+      })
+    };
+    document.getElementById("advTitle").textContent = plan.name + " — Advanced";
+    document.getElementById("advSub").textContent = resolved.length + " exercises · timed mode";
+    document.getElementById("advDate").value = todayStr();
+    document.getElementById("advRestSec").value = 60;
+    var host = document.getElementById("advSetsList");
+    host.innerHTML = "";
+    adv.exercises.forEach(function(a, i){
+      var row = document.createElement("div");
+      row.className = "plan-item-row";
+      row.innerHTML = "<span class='cat-dot'></span><div style='flex:1;min-width:0;'><div class='pn'>" + esc(a.name) + "</div>" +
+        "<div class='pm'>" + esc(a.catName) + "</div></div>" +
+        "<input type='number' min='1' max='20' step='1' value='3' style='width:70px;flex:none;' title='Planned sets'>";
+      row.querySelector("input").addEventListener("input", function(ev){
+        var v = parseInt(ev.target.value, 10);
+        adv.exercises[i].plannedSets = (isNaN(v) || v < 1) ? 1 : Math.min(20, v);
+      });
+      host.appendChild(row);
+    });
+    document.getElementById("advSetup").style.display = "";
+    document.getElementById("advLive").style.display = "none";
+    advStopTick();
+    openOverlay("advOverlay");
+  }
+  document.getElementById("startAdvBtn").addEventListener("click", function(){
+    closeOverlay("planDetailOverlay");
+    openAdvSetup(detailPlanId);
+  });
+
+  document.getElementById("advBeginBtn").addEventListener("click", function(){
+    if (!adv) return;
+    var d = document.getElementById("advDate").value || todayStr();
+    var rs = parseInt(document.getElementById("advRestSec").value, 10);
+    adv.date = d;
+    adv.restSec = (isNaN(rs) || rs < 5) ? 60 : Math.min(900, rs);
+    adv.startStamp = Date.now();
+    adv.exIndex = 0;
+    adv.exercises.forEach(function(a){ a.sets = []; a.exStart = null; a.exEnd = null; a.exSeconds = 0; });
+    adv.exercises[0].exStart = Date.now();
+    adv.setRunning = false; adv.resting = false; adv.restLeft = 0; adv.setSeconds = 0;
+    // Prefill first set weight/reps from last log for convenience
+    var first = previousSetRows(adv.exercises[0].ex)[0] || { weight: "", reps: "" };
+    document.getElementById("advWeight").value = (first.weight === null || first.weight === undefined) ? "" : first.weight;
+    document.getElementById("advReps").value = (first.reps === null || first.reps === undefined) ? "" : first.reps;
+    document.getElementById("advSetup").style.display = "none";
+    document.getElementById("advLive").style.display = "";
+    renderAdvLive();
+    advStopTick();
+    advTickInt = setInterval(advTick, 500);
+    showToast("Workout started — good luck!");
+  });
+
+  function advTick(){
+    if (!adv || !adv.startStamp || adv.finished) return;
+    var now = Date.now();
+    document.getElementById("advTotalTimer").textContent = advFmt((now - adv.startStamp) / 1000);
+    var cur = adv.exercises[adv.exIndex];
+    if (cur && cur.exStart && !cur.exEnd) cur.exSeconds = (now - cur.exStart) / 1000;
+    if (adv.setRunning && adv.setStart) adv.setSeconds = (now - adv.setStart) / 1000;
+    if (adv.resting){
+      // restLeft is computed from restEnd timestamp
+      adv.restLeft = Math.max(0, Math.ceil((adv.restEnd - now) / 1000));
+      if (adv.restLeft <= 0){
+        adv.resting = false;
+        showToast("Rest over — start your next set");
+        renderAdvLive();
+      }
+    }
+    var tEl = document.getElementById("advTotalTimer");
+    if (tEl) tEl.textContent = advFmt((now - adv.startStamp) / 1000);
+    var eEl = document.getElementById("advExTimer");
+    if (eEl && cur) eEl.textContent = advFmt(cur.exSeconds);
+    var sEl = document.getElementById("advSetTimer");
+    if (sEl) sEl.textContent = adv.setRunning ? advFmt(adv.setSeconds) : "00:00";
+    var rEl = document.getElementById("advRestTimer");
+    if (rEl) rEl.textContent = adv.resting ? advFmt(adv.restLeft) : "--:--";
+    document.getElementById("advExBox").classList.toggle("active", !!cur && !cur.exEnd);
+    document.getElementById("advSetBox").classList.toggle("active", adv.setRunning);
+    document.getElementById("advRestBox").classList.toggle("rest-active", adv.resting);
+    document.getElementById("advStartTimeLine").textContent =
+      "Started " + advClock(adv.startStamp) + " · " + adv.date;
+  }
+
+  function renderAdvLive(){
+    if (!adv) return;
+    advTick();
+    var cur = adv.exercises[adv.exIndex];
+    var total = adv.exercises.length;
+    document.getElementById("advExPos").textContent =
+      "Exercise " + (adv.exIndex + 1) + " of " + total + " · Set " + (cur.sets.length + (adv.setRunning ? 1 : 1)) + " of " + cur.plannedSets + " planned";
+    document.getElementById("advExName").textContent = cur.name;
+    document.getElementById("advTags").innerHTML =
+      muscleTagsHtml(cur.ex) + '<span class="tag method">' + esc(cur.ex.methodology) + "</span>" +
+      (cur.ex.purposes || []).map(function(p){ return '<span class="tag">' + esc(p) + "</span>"; }).join("");
+    var vb = document.getElementById("advVideoBtn");
+    if (cur.ex.video){ vb.href = cur.ex.video; vb.style.display = "flex"; } else { vb.style.display = "none"; }
+    document.getElementById("advStartSetBtn").style.display = (!adv.setRunning && !adv.resting) ? "" : "none";
+    document.getElementById("advFinishSetBtn").style.display = adv.setRunning ? "" : "none";
+    document.getElementById("advNextSetBtn").style.display = (!adv.setRunning && cur.sets.length > 0) ? "" : "none";
+    document.getElementById("advNextSetBtn").textContent = "➕ Start another set (" + cur.sets.length + " done)";
+    var isLast = adv.exIndex === total - 1;
+    document.getElementById("advNextExBtn").textContent = isLast ? "Next exercise → (none left)" : "Next exercise → (" + adv.exercises[adv.exIndex + 1].name + ")";
+    document.getElementById("advNextExBtn").disabled = isLast;
+    document.getElementById("advNextExBtn").style.opacity = isLast ? 0.4 : 1;
+    // Progress list
+    var host = document.getElementById("advLiveList");
+    host.innerHTML = "";
+    adv.exercises.forEach(function(a, i){
+      var row = document.createElement("div");
+      row.className = "adv-live-row" + (i === adv.exIndex ? " current" : "") + (a.exEnd ? " done" : "");
+      var status = a.exEnd ? "✔ " + advFmt(a.exSeconds) + " · " + a.sets.length + " sets"
+        : (i === adv.exIndex ? advFmt(a.exSeconds) + " · " + a.sets.length + " sets" : a.sets.length + " sets");
+      row.innerHTML = "<span>" + (i + 1) + ". " + esc(a.name) + "</span><span class='st'>" + esc(status) + "</span>";
+      host.appendChild(row);
+    });
+  }
+
+  document.getElementById("advStartSetBtn").addEventListener("click", function(){
+    if (!adv || adv.setRunning || adv.resting) return;
+    adv.setRunning = true;
+    adv.setStart = Date.now();
+    adv.setSeconds = 0;
+    renderAdvLive();
+  });
+
+  document.getElementById("advFinishSetBtn").addEventListener("click", function(){
+    if (!adv || !adv.setRunning) return;
+    var cur = adv.exercises[adv.exIndex];
+    var now = Date.now();
+    var dur = Math.max(1, Math.round((now - adv.setStart) / 1000));
+    var wRaw = document.getElementById("advWeight").value;
+    var rRaw = document.getElementById("advReps").value;
+    cur.sets.push({
+      weight: wRaw === "" ? null : parseFloat(wRaw),
+      reps: rRaw === "" ? null : parseInt(rRaw, 10),
+      durationSec: dur
+    });
+    adv.setRunning = false;
+    adv.setSeconds = 0;
+    // Auto-start rest timer between sets
+    adv.resting = true;
+    adv.restEnd = Date.now() + adv.restSec * 1000;
+    adv.restLeft = adv.restSec;
+    // Keep weight/reps for next set (convenient), clear nothing
+    showToast("Set " + cur.sets.length + " logged (" + advFmt(dur) + ") — rest " + advFmt(adv.restSec));
+    renderAdvLive();
+  });
+
+  // "Start another set" = skip/forgive rest and arm the Start-set button
+  document.getElementById("advNextSetBtn").addEventListener("click", function(){
+    if (!adv || adv.setRunning) return;
+    adv.resting = false;
+    adv.restLeft = 0;
+    renderAdvLive();
+    // Focus the Start set button flow: user presses Start set next
+    showToast("Ready — press Start set");
+  });
+
+  // Reset: clears current set timer + rest timer (keeps logged sets & exercise clock)
+  document.getElementById("advResetBtn").addEventListener("click", function(){
+    if (!adv) return;
+    adv.setRunning = false;
+    adv.setStart = null;
+    adv.setSeconds = 0;
+    adv.resting = false;
+    adv.restLeft = 0;
+    showToast("Timers reset — logged sets kept");
+    renderAdvLive();
+  });
+
+  document.getElementById("advNextExBtn").addEventListener("click", function(){
+    if (!adv) return;
+    if (adv.exIndex >= adv.exercises.length - 1) return;
+    advAdvanceExercise();
+  });
+
+  function advAdvanceExercise(){
+    var cur = adv.exercises[adv.exIndex];
+    if (adv.setRunning){
+      // Auto-close a running set before leaving the exercise
+      var now = Date.now();
+      var wRaw = document.getElementById("advWeight").value;
+      var rRaw = document.getElementById("advReps").value;
+      cur.sets.push({
+        weight: wRaw === "" ? null : parseFloat(wRaw),
+        reps: rRaw === "" ? null : parseInt(rRaw, 10),
+        durationSec: Math.max(1, Math.round((now - adv.setStart) / 1000))
+      });
+      adv.setRunning = false;
+    }
+    adv.resting = false;
+    cur.exEnd = Date.now();
+    cur.exSeconds = (cur.exEnd - cur.exStart) / 1000;
+    adv.exIndex++;
+    var nxt = adv.exercises[adv.exIndex];
+    nxt.exStart = Date.now();
+    nxt.exSeconds = 0;
+    var pre = previousSetRows(nxt.ex)[0] || { weight: "", reps: "" };
+    document.getElementById("advWeight").value = (pre.weight === null || pre.weight === undefined) ? "" : pre.weight;
+    document.getElementById("advReps").value = (pre.reps === null || pre.reps === undefined) ? "" : pre.reps;
+    showToast("Next: " + nxt.name);
+    renderAdvLive();
+  }
+
+  document.getElementById("advFinishBtn").addEventListener("click", function(){
+    if (!adv) return;
+    if (!confirm("Finish the workout now and see the brief?")) return;
+    advFinishWorkout();
+  });
+
+  function advFinishWorkout(){
+    var now = Date.now();
+    var cur = adv.exercises[adv.exIndex];
+    if (adv.setRunning && cur){
+      var wRaw = document.getElementById("advWeight").value;
+      var rRaw = document.getElementById("advReps").value;
+      cur.sets.push({
+        weight: wRaw === "" ? null : parseFloat(wRaw),
+        reps: rRaw === "" ? null : parseInt(rRaw, 10),
+        durationSec: Math.max(1, Math.round((now - adv.setStart) / 1000))
+      });
+      adv.setRunning = false;
+    }
+    if (cur && !cur.exEnd){ cur.exEnd = now; cur.exSeconds = (cur.exEnd - cur.exStart) / 1000; }
+    adv.endStamp = now;
+    adv.finished = true;
+    advStopTick();
+    // Persist each exercise's sets into its history log (same shape as Basic mode)
+    adv.exercises.forEach(function(a){
+      if (!a.sets.length) return; // skipped exercise -> no log, keeps calendar honest
+      a.ex.logs = a.ex.logs || [];
+      a.ex.logs.push({
+        id: uid(), date: adv.date,
+        sets: a.sets.map(function(s){ return { weight: s.weight, reps: s.reps }; })
+      });
+      a.ex.logs.sort(function(x, y){ return x.date < y.date ? -1 : 1; });
+    });
+    saveState();
+    render();
+    showAdvSummary();
+  }
+
+  function showAdvSummary(){
+    var totalSec = Math.round((adv.endStamp - adv.startStamp) / 1000);
+    document.getElementById("advSummaryTitle").textContent = adv.planName + " — brief";
+    document.getElementById("advSummarySub").textContent = adv.date + " · " + adv.exercises.length + " exercises";
+    var rows = adv.exercises.map(function(a, i){
+      var setsStr = a.sets.length
+        ? a.sets.map(function(s, si){
+            return "S" + (si + 1) + ": " + (s.weight == null ? "–" : s.weight) + "×" + (s.reps == null ? "–" : s.reps) + " (" + advFmt(s.durationSec) + ")";
+          }).join(", ")
+        : "skipped";
+      return "<tr><td>" + (i + 1) + ". " + esc(a.name) + "</td><td>" + advFmt(a.exSeconds) + "</td><td>" + a.sets.length + "/" + a.plannedSets + "</td><td>" + esc(setsStr) + "</td></tr>";
+    }).join("");
+    document.getElementById("advSummaryBody").innerHTML =
+      "<div class='adv-kv'><span>🏁 Beginning (real time)</span><b>" + advClock(adv.startStamp) + "</b></div>" +
+      "<div class='adv-kv'><span>🏁 Finish (real time)</span><b>" + advClock(adv.endStamp) + "</b></div>" +
+      "<div class='adv-kv'><span>⏱ Total period</span><b>" + advFmt(totalSec) + "</b></div>" +
+      "<div class='adv-kv'><span>💪 Sets logged</span><b>" + adv.exercises.reduce(function(n, a){ return n + a.sets.length; }, 0) + "</b></div>" +
+      "<table class='adv-summary-table'><tr><th>Exercise</th><th>Period</th><th>Sets</th><th>Detail</th></tr>" + rows + "</table>";
+    closeOverlay("advOverlay");
+    openOverlay("advSummaryOverlay");
+  }
+  document.getElementById("advSummaryDoneBtn").addEventListener("click", function(){
+    closeOverlay("advSummaryOverlay");
+    showToast("Great session — logged to your history.");
+  });
+  // If user closes the live sheet mid-workout, stop timers (workout is discarded)
+  document.querySelectorAll('[data-close="advOverlay"]').forEach(function(btn){
+    btn.addEventListener("click", function(){
+      if (adv && adv.startStamp && !adv.finished){
+        if (!confirm("Quit this workout without saving?")){ openOverlay("advOverlay"); return; }
+        advStopTick();
+        adv = null;
+      }
+    });
   });
 
   // ==================== SCHEDULE / CALENDAR ====================
