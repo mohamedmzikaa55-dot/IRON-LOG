@@ -163,6 +163,7 @@
   .btn.icon { padding: 9px; }
   .btn.small { padding: 6px 10px; font-size: 12.5px; }
   .btn.danger-outline { color: var(--danger); border-color: var(--danger); background: transparent; }
+  .btn svg { flex: none; display: inline-block; vertical-align: -2px; }
 
   /* ---------- Top-level section nav ---------- */
   .main-nav {
@@ -618,6 +619,14 @@
   .log-entry .top { font-size: 12.5px; font-weight: 700; color: var(--good); flex: none; }
   .log-entry .del { background: none; border: none; color: var(--text-dim); font-size: 15px; flex: none; }
   .log-entry .del:hover { color: var(--danger); }
+  .log-entry .row-actions { display: flex; gap: 2px; flex: none; align-items: center; }
+  .log-entry .edit-btn { background: none; border: none; color: var(--text-dim); font-size: 15px; flex: none; }
+  .log-entry .edit-btn:hover { color: var(--accent); }
+  .log-entry.locked { opacity: 0.95; }
+  .section-head-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 18px 0 10px; }
+  .section-head-row .section-title { margin: 0; }
+  .history-lock-hint { font-size: 11.5px; color: var(--text-dim); margin: -4px 0 10px; }
+  .editing-banner { font-size: 12px; font-weight: 700; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 8px; padding: 7px 10px; margin-bottom: 10px; display: none; }
   .spark-wrap { background: var(--surface-2); border-radius: 10px; padding: 12px; margin-bottom: 16px; }
   .spark-wrap .caption { font-size: 11.5px; color: var(--text-dim); margin-bottom: 6px; }
 
@@ -738,8 +747,8 @@
       </div>
       <div class="top-actions">
         <button class="btn icon theme-toggle" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">🌗</button>
-        <button class="btn" id="exportBtn">⭳ Export</button>
-        <button class="btn" id="importBtn">⭱ Import</button>
+        <button class="btn" id="exportBtn" title="Export backup" aria-label="Export backup"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg><span>Export</span></button>
+        <button class="btn" id="importBtn" title="Import backup" aria-label="Import backup"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"/><path d="M7 14l5-5 5 5"/><path d="M4 3h16"/></svg><span>Import</span></button>
         <input type="file" id="importFile" accept="application/json" class="sr-only">
         <button class="btn primary" id="addCatBtn">+ Category</button>
         <button class="btn primary" id="addPlanBtn" style="display:none;">+ Plan</button>
@@ -751,7 +760,7 @@
       <button data-tab="library" class="active">📚 Library</button>
       <button data-tab="plans">📋 Plans</button>
       <button data-tab="calendar">🗓 Calendar</button>
-      <button data-tab="settings">&#9881; Settings</button>
+      <button data-tab="settings">⚙️ Settings</button>
     </nav>
 
     <nav class="cats" id="catTabs" aria-label="Workout categories"></nav>
@@ -838,6 +847,7 @@
     <a class="video-btn" id="detailVideoBtn" href="#" target="_blank" rel="noopener noreferrer">▶ Watch how-to &amp; best practice</a>
 
     <div class="section-title">Log today's sets</div>
+    <div class="editing-banner" id="editingBanner">✎ Editing a recorded session — <span id="editingBannerDate"></span>. Save to apply, or Cancel.</div>
     <div class="field" style="margin-bottom:10px;">
       <label for="logDate">Date</label>
       <input id="logDate" type="date">
@@ -846,6 +856,7 @@
     <button type="button" class="btn small ghost" id="addSetRowBtn">+ Add set</button>
     <div class="sheet-actions">
       <button type="button" class="btn primary" id="saveLogBtn">Save session</button>
+      <button type="button" class="btn ghost" id="cancelEditBtn" style="display:none;">Cancel edit</button>
     </div>
 
     <div class="section-title">Progress</div>
@@ -854,7 +865,11 @@
       <div id="sparkHost"></div>
     </div>
 
-    <div class="section-title">History</div>
+    <div class="section-head-row">
+      <div class="section-title">History</div>
+      <button type="button" class="btn small ghost" id="historyEditBtn">🔒 Edit</button>
+    </div>
+    <div class="history-lock-hint" id="historyLockHint">🔒 Locked — tap Edit to change or delete a recorded session.</div>
     <div id="logList"></div>
 
     <div class="sheet-actions">
@@ -1231,6 +1246,8 @@
   var detailExerciseId = null;
   var pendingSetRows = [{weight:"", reps:""}];
   var pendingImportPayload = null;
+  var historyEditMode = false; // history Edit/Delete locked until toggled
+  var editingLogId = null; // when set, Save updates this recorded session
 
   var mainTab = "library"; // library | plans | calendar | settings
   var librarySortBy = "name";
@@ -2654,7 +2671,58 @@
       '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim);margin-top:4px;"><span>'+min+'</span><span>peak '+max+'</span></div>';
   }
 
+  function syncHistoryLockUI(){
+    var btn = document.getElementById("historyEditBtn");
+    var hint = document.getElementById("historyLockHint");
+    if (btn) btn.textContent = historyEditMode ? "Done" : "🔒 Edit";
+    if (hint) hint.textContent = historyEditMode
+      ? "Unlocked — you can now edit or delete a recorded session."
+      : "🔒 Locked — tap Edit to change or delete a recorded session.";
+  }
+
+  function cancelLogEdit(){
+    editingLogId = null;
+    document.getElementById("saveLogBtn").textContent = "Save session";
+    document.getElementById("cancelEditBtn").style.display = "none";
+    document.getElementById("editingBanner").style.display = "none";
+  }
+
+  function startLogEdit(log){
+    editingLogId = log.id;
+    document.getElementById("logDate").value = log.date || todayStr();
+    pendingSetRows = (log.sets || []).map(function(s){
+      return {
+        weight: (s.weight === null || s.weight === undefined) ? "" : s.weight,
+        reps: (s.reps === null || s.reps === undefined) ? "" : s.reps
+      };
+    });
+    if (!pendingSetRows.length) pendingSetRows = [{weight:"", reps:""}];
+    renderSetRows();
+    document.getElementById("saveLogBtn").textContent = "Update session";
+    document.getElementById("cancelEditBtn").style.display = "";
+    document.getElementById("editingBanner").style.display = "";
+    document.getElementById("editingBannerDate").textContent = log.date || "";
+    document.getElementById("detailOverlay").querySelector(".sheet").scrollTo({ top: 0, behavior: "smooth" });
+  }
+  document.getElementById("cancelEditBtn").addEventListener("click", function(){
+    cancelLogEdit();
+    var found = findExerciseAnywhere(detailExerciseId);
+    if (found){
+      document.getElementById("logDate").value = todayStr();
+      pendingSetRows = previousSetRows(found.ex);
+      renderSetRows();
+    }
+  });
+  document.getElementById("historyEditBtn").addEventListener("click", function(){
+    historyEditMode = !historyEditMode;
+    if (!historyEditMode) cancelLogEdit();
+    syncHistoryLockUI();
+    var found = findExerciseAnywhere(detailExerciseId);
+    if (found) renderLogList(found.ex);
+  });
+
   function renderLogList(ex){
+    syncHistoryLockUI();
     var host = document.getElementById("logList");
     if (!ex.logs || !ex.logs.length){
       host.innerHTML = "<div style='font-size:13px;color:var(--text-dim);'>Nothing logged yet. Add your first session above.</div>";
@@ -2665,16 +2733,28 @@
       var setsStr = (log.sets||[]).map(function(s){ return (s.weight||"–") + "×" + (s.reps||"–"); }).join(", ");
       var top = topWeightOfLog(log);
       var row = document.createElement("div");
-      row.className = "log-entry";
-      row.innerHTML =
-        '<div class="date">'+esc(log.date)+'</div>' +
-        '<div class="sets-str">'+esc(setsStr)+'</div>' +
-        '<div class="top">'+ (top || "–") +'</div>' +
-        '<button class="del" title="Delete session">🗑</button>';
-      row.querySelector(".del").addEventListener("click", function(){
-        ex.logs = ex.logs.filter(function(l){ return l.id !== log.id; });
-        saveState(); renderLogList(ex); renderSpark(ex); render();
-      });
+      row.className = "log-entry" + (historyEditMode ? "" : " locked");
+      if (historyEditMode){
+        row.innerHTML =
+          '<div class="date">'+esc(log.date)+'</div>' +
+          '<div class="sets-str">'+esc(setsStr)+'</div>' +
+          '<div class="top">'+ (top || "–") +'</div>' +
+          '<div class="row-actions"><button class="edit-btn" title="Edit session">✎</button>' +
+          '<button class="del" title="Delete session">🗑</button></div>';
+        row.querySelector(".edit-btn").addEventListener("click", function(){ startLogEdit(log); });
+        row.querySelector(".del").addEventListener("click", function(){
+          if (!confirm("Delete the session on " + log.date + "?")) return;
+          if (editingLogId === log.id) cancelLogEdit();
+          ex.logs = ex.logs.filter(function(l){ return l.id !== log.id; });
+          saveState(); renderLogList(ex); renderSpark(ex); render();
+          showToast("Session deleted");
+        });
+      } else {
+        row.innerHTML =
+          '<div class="date">'+esc(log.date)+'</div>' +
+          '<div class="sets-str">'+esc(setsStr)+'</div>' +
+          '<div class="top">'+ (top || "–") +'</div>';
+      }
       host.appendChild(row);
     });
   }
@@ -2684,6 +2764,8 @@
     if (!ex) return;
     detailExerciseId = exId;
     exerciseTargetCatId = catId;
+    historyEditMode = false;
+    cancelLogEdit();
     document.getElementById("detailTitle").textContent = ex.name;
     document.getElementById("detailTags").innerHTML =
       muscleTagsHtml(ex) + '<span class="tag method">'+esc(ex.methodology)+'</span>' +
@@ -2709,15 +2791,24 @@
       .map(function(r){ return { weight: r.weight === "" ? null : parseFloat(r.weight), reps: r.reps === "" ? null : parseInt(r.reps,10) }; });
     if (!sets.length){ showToast("Add at least one set first"); return; }
     ex.logs = ex.logs || [];
-    ex.logs.push({ id: uid(), date: date, sets: sets });
+    if (editingLogId){
+      var target = ex.logs.find(function(l){ return l.id === editingLogId; });
+      if (target){ target.date = date; target.sets = sets; }
+      else { ex.logs.push({ id: editingLogId, date: date, sets: sets }); }
+      showToast("Session updated");
+    } else {
+      ex.logs.push({ id: uid(), date: date, sets: sets });
+      showToast("Session saved");
+    }
     ex.logs.sort(function(a,b){ return a.date < b.date ? -1 : 1; });
     saveState();
+    cancelLogEdit();
+    document.getElementById("logDate").value = todayStr();
     pendingSetRows = [{weight:"", reps:""}];
     renderSetRows();
     renderLogList(ex);
     renderSpark(ex);
     render();
-    showToast("Session saved");
   });
 
   document.getElementById("editExerciseBtn").addEventListener("click", function(){
@@ -2739,9 +2830,94 @@
   document.getElementById("addCatBtn").addEventListener("click", openCategoryAdd);
 
   // ==================== SETTINGS / BACKUP FOLDER / INSTALL ====================
+  var APP_VERSION = "v4.0 — Advanced timers · Locked history · Update App";
   var backupDirHandle = null;
   var backupDirStatus = "boot"; // unsupported | unset | prompt | granted | denied
   var deferredInstallPrompt = null;
+  var appUpdateState = { checking: false, ready: false, reg: null };
+
+  function setUpdateStatus(msg){
+    var el = document.getElementById("appUpdateStatus");
+    if (el) el.textContent = msg;
+  }
+  function refreshUpdateCard(){
+    var pill = document.getElementById("appVersionPill");
+    if (pill) pill.textContent = "Version: " + APP_VERSION;
+    var applyBtn = document.getElementById("applyUpdateBtn");
+    if (applyBtn) applyBtn.style.display = (appUpdateState.ready && appUpdateState.reg && appUpdateState.reg.waiting) ? "" : "none";
+    var checkBtn = document.getElementById("checkUpdateBtn");
+    if (checkBtn) checkBtn.disabled = !!appUpdateState.checking;
+  }
+  function checkForAppUpdate(){
+    if (!("serviceWorker" in navigator)){
+      setUpdateStatus("Updates run through the installed app. This browser has no service worker support.");
+      return;
+    }
+    appUpdateState.checking = true;
+    refreshUpdateCard();
+    setUpdateStatus("Checking for updates…");
+    navigator.serviceWorker.getRegistration().then(function(reg){
+      if (!reg){
+        appUpdateState.checking = false;
+        refreshUpdateCard();
+        setUpdateStatus("App is not installed with a service worker here — open the installed app (or the dist build over https/localhost) to update.");
+        return;
+      }
+      appUpdateState.reg = reg;
+      if (reg.waiting){
+        appUpdateState.checking = false;
+        appUpdateState.ready = true;
+        refreshUpdateCard();
+        setUpdateStatus("Update ready — tap Restart to apply it.");
+        return;
+      }
+      function onFound(){
+        var sw = reg.installing;
+        setUpdateStatus("Downloading update…");
+        if (sw) sw.addEventListener("statechange", function(){
+          if (sw.state === "installed" && navigator.serviceWorker.controller){
+            appUpdateState.checking = false;
+            appUpdateState.ready = true;
+            appUpdateState.reg = reg;
+            refreshUpdateCard();
+            setUpdateStatus("Update ready — tap Restart to apply it.");
+          }
+        });
+      }
+      reg.addEventListener("updatefound", onFound);
+      reg.update().then(function(){
+        window.setTimeout(function(){
+          if (!appUpdateState.ready){
+            appUpdateState.checking = false;
+            refreshUpdateCard();
+            setUpdateStatus("You're on the latest version.");
+          }
+        }, 2500);
+      }).catch(function(){
+        appUpdateState.checking = false;
+        refreshUpdateCard();
+        setUpdateStatus("Couldn't check — are you offline?");
+      });
+    }).catch(function(){
+      appUpdateState.checking = false;
+      refreshUpdateCard();
+      setUpdateStatus("Couldn't check — are you offline?");
+    });
+  }
+  function applyAppUpdate(){
+    var reg = appUpdateState.reg;
+    if (reg && reg.waiting){
+      setUpdateStatus("Applying update…");
+      reg.waiting.postMessage("SKIP_WAITING");
+      return;
+    }
+    window.location.reload();
+  }
+  if ("serviceWorker" in navigator){
+    navigator.serviceWorker.addEventListener("controllerchange", function(){
+      window.location.reload();
+    });
+  }
 
   function fsAccessSupported(){ return typeof window.showDirectoryPicker === "function"; }
 
@@ -2913,6 +3089,21 @@
     wrap.appendChild(inst);
     var installBtn = inst.querySelector("#setInstallBtn");
     if (installBtn) installBtn.addEventListener("click", installApp);
+
+    var up = document.createElement("div");
+    up.className = "set-card";
+    up.innerHTML = "<h3>Update app</h3>" +
+      "<div class='d'>After an update (like this one), tap Check for updates, then Restart to load the newest version. Your logged data stays on this device.</div>" +
+      "<div class='set-rowline'><span class='folder-pill' id='appVersionPill'>Version: " + esc(APP_VERSION) + "</span></div>" +
+      "<div class='set-rowline' style='margin-top:8px;'>" +
+        "<button class='btn primary' id='checkUpdateBtn'>Check for updates</button>" +
+        "<button class='btn' id='applyUpdateBtn' style='display:none;'>Restart to apply</button>" +
+      "</div>" +
+      "<div class='d' id='appUpdateStatus' style='margin-top:8px;'>Idle.</div>";
+    wrap.appendChild(up);
+    up.querySelector("#checkUpdateBtn").addEventListener("click", checkForAppUpdate);
+    up.querySelector("#applyUpdateBtn").addEventListener("click", applyAppUpdate);
+    refreshUpdateCard();
 
     var bc = document.createElement("div");
     bc.className = "set-card";
