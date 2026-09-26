@@ -1043,10 +1043,12 @@
       <div class="field" style="margin-bottom:10px;">
         <label for="advRestSec">Rest between sets (seconds)</label>
         <input id="advRestSec" type="number" min="5" max="900" step="5" value="60">
+        <div class="hint">Timer counts up from 0 — this is only the target marker.</div>
       </div>
       <div class="field" style="margin-bottom:10px;">
         <label for="advRestExSec">Rest between exercises (seconds)</label>
         <input id="advRestExSec" type="number" min="0" max="1800" step="5" value="90">
+        <div class="hint">Counts up too. 0 = jump straight to the next exercise.</div>
       </div>
       <div class="field">
         <label>Sets planned per exercise (you can do more or fewer)</label>
@@ -1077,8 +1079,8 @@
       <a class="video-btn" id="advVideoBtn" href="#" target="_blank" rel="noopener noreferrer">▶ Watch how-to &amp; best practice</a>
 
       <div class="adv-set-inputs">
-        <div><div class="set-row-label">Weight (kg/lb)</div><input id="advWeight" type="number" min="0" step="0.5" placeholder="60"></div>
-        <div><div class="set-row-label">Reps</div><input id="advReps" type="number" min="0" step="1" placeholder="8"></div>
+        <div><div class="set-row-label">Weight / Minutes</div><input id="advWeight" type="number" min="0" step="any" placeholder="60 or 1.5"></div>
+        <div><div class="set-row-label">Unit</div><select id="advUnit"><option value="KG">KG</option><option value="MIN">MIN</option></select></div>
       </div>
 
       <div class="adv-btn-grid">
@@ -1284,7 +1286,7 @@
   var editingExerciseId = null;
   var editingCategoryId = null;
   var detailExerciseId = null;
-  var pendingSetRows = [{weight:"", reps:""}];
+  var pendingSetRows = [{weight:"", unit:"KG"}];
   var pendingImportPayload = null;
   var historyEditMode = false; // history Edit/Delete locked until toggled
   var editingLogId = null; // when set, Save updates this recorded session
@@ -1377,8 +1379,29 @@
 
   function topWeightOfLog(log){
     var top = 0;
-    (log.sets || []).forEach(function(s){ var w = parseFloat(s.weight) || 0; if (w > top) top = w; });
+    (log.sets || []).forEach(function(s){
+      if (s.unit === "MIN") return; // timed sets don't count as top weight
+      var w = parseFloat(s.weight) || 0; if (w > top) top = w;
+    });
     return top;
+  }
+
+  function trimNum(n){
+    if (n === null || n === undefined || n === "") return "–";
+    var f = parseFloat(n);
+    if (isNaN(f)) return String(n);
+    return String(Math.round(f * 100) / 100);
+  }
+
+  // One set as text: "60KG", "1.5MIN". Old logs with reps show legacy "60×8".
+  function fmtSet(s){
+    var amt = (s.weight === null || s.weight === undefined || s.weight === "") ? "–" : trimNum(s.weight);
+    if (s.unit === "MIN") return amt + "MIN";
+    if (s.unit === "KG" || s.unit === undefined || s.unit === null || s.unit === ""){
+      if (s.reps !== null && s.reps !== undefined && s.reps !== "") return amt + "×" + s.reps;
+      return amt + "KG";
+    }
+    return amt + s.unit;
   }
 
   function lastSessionSummary(ex){
@@ -1771,16 +1794,19 @@
   var sessionPlanId = null;
   var sessionValidItems = [];
   var sessionIndex = 0;
-  var sessionSetRows = [{weight:"", reps:""}];
+  var sessionSetRows = [{weight:"", unit:"KG"}];
   var sessionStartStamp = null;
   var sessionSavedByEx = {}; // exId -> logId logged during this Basic run
 
   function previousSetRows(ex){
-    if (!ex.logs || !ex.logs.length) return [{weight:"", reps:""}];
+    if (!ex.logs || !ex.logs.length) return [{weight:"", unit:"KG"}];
     var last = ex.logs[ex.logs.length - 1];
-    if (!last.sets || !last.sets.length) return [{weight:"", reps:""}];
+    if (!last.sets || !last.sets.length) return [{weight:"", unit:"KG"}];
     return last.sets.map(function(s){
-      return { weight: (s.weight === null || s.weight === undefined) ? "" : s.weight, reps: (s.reps === null || s.reps === undefined) ? "" : s.reps };
+      return {
+        weight: (s.weight === null || s.weight === undefined) ? "" : s.weight,
+        unit: (s.unit === "MIN" || s.unit === "KG") ? s.unit : "KG"
+      };
     });
   }
 
@@ -1795,7 +1821,7 @@
     sessionPlanId = planId;
     sessionValidItems = resolved;
     sessionIndex = 0;
-    sessionSetRows = [{weight:"", reps:""}];
+    sessionSetRows = [{weight:"", unit:"KG"}];
     sessionStartStamp = Date.now();
     sessionSavedByEx = {};
     document.getElementById("sessionTitle").textContent = plan.name;
@@ -1831,8 +1857,8 @@
     var step = sessionValidItems[sessionIndex];
     var date = document.getElementById("sessionDate").value || todayStr();
     var sets = sessionSetRows
-      .filter(function(r){ return r.weight !== "" || r.reps !== ""; })
-      .map(function(r){ return { weight: r.weight === "" ? null : parseFloat(r.weight), reps: r.reps === "" ? null : parseInt(r.reps,10) }; });
+      .filter(function(r){ return r.weight !== ""; })
+      .map(function(r){ return { weight: r.weight === "" ? null : parseFloat(r.weight), unit: (r.unit === "MIN" ? "MIN" : "KG") }; });
     if (!sets.length) return false;
     step.ex.logs = step.ex.logs || [];
     var logId = uid();
@@ -1871,7 +1897,7 @@
         name: step.ex.name,
         plannedSets: null,
         exSeconds: null,
-        sets: (log.sets || []).map(function(s){ return { weight: s.weight, reps: s.reps, durationSec: null, restAfterSec: null }; })
+        sets: (log.sets || []).map(function(s){ return { weight: s.weight, unit: (s.unit === "MIN" ? "MIN" : "KG"), durationSec: null, restAfterSec: null }; })
       });
     });
     if (!exercises.length) return;
@@ -1893,7 +1919,7 @@
   }
 
   document.getElementById("sessionAddSetRowBtn").addEventListener("click", function(){
-    sessionSetRows.push({weight:"", reps:""});
+    sessionSetRows.push({weight:"", unit:"KG"});
     renderSetRowsList(sessionSetRows, "sessionSetRows");
   });
   document.getElementById("sessionNextBtn").addEventListener("click", function(){
@@ -1936,14 +1962,28 @@
   }
   function advStopTick(){ if (advTickInt){ clearInterval(advTickInt); advTickInt = null; } }
 
+  // Each set = one value + unit ("60KG" / "1.5MIN"). Reads the live inputs.
+  function advCurrentSetValues(){
+    var wRaw = document.getElementById("advWeight").value;
+    var uRaw = document.getElementById("advUnit").value;
+    return {
+      weight: wRaw === "" ? null : parseFloat(wRaw),
+      unit: (uRaw === "MIN" ? "MIN" : "KG")
+    };
+  }
+  function advPrefillSetInputs(pre){
+    document.getElementById("advWeight").value = (pre.weight === null || pre.weight === undefined) ? "" : pre.weight;
+    document.getElementById("advUnit").value = (pre.unit === "MIN" ? "MIN" : "KG");
+  }
+
   // Record the elapsed between-sets rest onto the last logged set of the
-  // current exercise (once per rest). `full` = rest ran its whole countdown.
-  function advRecordSetRest(now, full){
-    if (!adv || adv.restRecorded || !adv.restStart) return;
+  // current exercise (once per rest). The rest timer counts UP — the target
+  // is only a guide beep, the taken time is what gets stored.
+  function advRecordSetRest(now){    if (!adv || adv.restSaved || !adv.restStart) return;
     var cur = adv.exercises[adv.exIndex];
-    var taken = full ? adv.restSec : Math.max(0, Math.round((now - adv.restStart) / 1000));
+    var taken = Math.max(0, Math.round((now - adv.restStart) / 1000));
     if (cur.sets.length) cur.sets[cur.sets.length - 1].restAfterSec = taken;
-    adv.restRecorded = true;
+    adv.restSaved = true;
   }
 
   function openAdvSetup(planId){
@@ -1964,10 +2004,11 @@
       setStart: null,
       setSeconds: 0,
       resting: false,
-      restLeft: 0,
+      restElapsed: 0,
       restStart: null,
-      restRecorded: true,
-      exRest: null, // { toIdx, start, total, end } — rest phase between exercises
+      restSaved: true,
+      restTargetNotified: false,
+      exRest: null, // { toIdx, start, total, elapsed, notified } — rest phase between exercises
       exGaps: [],
       finished: false,
       exercises: resolved.map(function(r){
@@ -2017,12 +2058,12 @@
     adv.exIndex = 0;
     adv.exercises.forEach(function(a){ a.sets = []; a.exStart = null; a.exEnd = null; a.exSeconds = 0; });
     adv.exercises[0].exStart = Date.now();
-    adv.setRunning = false; adv.resting = false; adv.restLeft = 0; adv.setSeconds = 0;
-    adv.restStart = null; adv.restRecorded = true; adv.exRest = null; adv.exGaps = [];
-    // Prefill first set weight/reps from last log for convenience
-    var first = previousSetRows(adv.exercises[0].ex)[0] || { weight: "", reps: "" };
-    document.getElementById("advWeight").value = (first.weight === null || first.weight === undefined) ? "" : first.weight;
-    document.getElementById("advReps").value = (first.reps === null || first.reps === undefined) ? "" : first.reps;
+    adv.setRunning = false; adv.resting = false; adv.setSeconds = 0;
+    adv.restStart = null; adv.restSaved = true; adv.restTargetNotified = false; adv.restElapsed = 0; adv.exRest = null; adv.exGaps = [];
+    document.querySelector("#advRestBox .lbl").textContent = "Rest · " + advFmt(adv.restSec);
+    // Prefill first set value/unit from last log for convenience
+    var first = previousSetRows(adv.exercises[0].ex)[0] || { weight: "", unit: "KG" };
+    advPrefillSetInputs(first);
     document.getElementById("advSetup").style.display = "none";
     document.getElementById("advLive").style.display = "";
     renderAdvLive();
@@ -2038,20 +2079,22 @@
     var cur = adv.exercises[adv.exIndex];
     if (cur && cur.exStart && !cur.exEnd) cur.exSeconds = (now - cur.exStart) / 1000;
     if (adv.setRunning && adv.setStart) adv.setSeconds = (now - adv.setStart) / 1000;
-    if (adv.resting){
-      // restLeft is computed from restEnd timestamp
-      adv.restLeft = Math.max(0, Math.ceil((adv.restEnd - now) / 1000));
-      if (adv.restLeft <= 0){
-        advRecordSetRest(now, true);
-        adv.resting = false;
-        showToast("Rest over — start your next set");
+    if (adv.resting && adv.restStart){
+      // Rest counts UP from 0 — the target is only a guide beep.
+      adv.restElapsed = Math.max(0, Math.floor((now - adv.restStart) / 1000));
+      if (adv.restElapsed >= adv.restSec && !adv.restTargetNotified){
+        adv.restTargetNotified = true;
+        showToast("Rest target reached (" + advFmt(adv.restSec) + ") — start your next set");
         renderAdvLive();
       }
     }
     if (adv.exRest){
-      var left = Math.max(0, Math.ceil((adv.exRest.end - now) / 1000));
-      adv.exRest.left = left;
-      if (left <= 0) advCompleteExRest(now, true);
+      adv.exRest.elapsed = Math.max(0, Math.floor((now - adv.exRest.start) / 1000));
+      if (adv.exRest.elapsed >= adv.exRest.total && !adv.exRest.notified){
+        adv.exRest.notified = true;
+        showToast("Rest target reached (" + advFmt(adv.exRest.total) + ") — start " + adv.exercises[adv.exRest.toIdx].name);
+        renderAdvLive();
+      }
     }
     var tEl = document.getElementById("advTotalTimer");
     if (tEl) tEl.textContent = advFmt((now - adv.startStamp) / 1000);
@@ -2060,7 +2103,11 @@
     var sEl = document.getElementById("advSetTimer");
     if (sEl) sEl.textContent = adv.setRunning ? advFmt(adv.setSeconds) : "00:00";
     var rEl = document.getElementById("advRestTimer");
-    if (rEl) rEl.textContent = adv.exRest ? advFmt(adv.exRest.left) : (adv.resting ? advFmt(adv.restLeft) : "--:--");
+    if (rEl) rEl.textContent = adv.exRest ? advFmt(adv.exRest.elapsed) : (adv.resting ? advFmt(adv.restElapsed) : "--:--");
+    var nsBtn = document.getElementById("advNextSetBtn");
+    if (nsBtn && nsBtn.style.display !== "none" && adv.resting) nsBtn.textContent = "➕ Start another set — rested " + advFmt(adv.restElapsed);
+    var sxBtn = document.getElementById("advSkipExRestBtn");
+    if (sxBtn && sxBtn.style.display !== "none" && adv.exRest) sxBtn.textContent = "Skip rest & start — rested " + advFmt(adv.exRest.elapsed) + " / " + advFmt(adv.exRest.total);
     document.getElementById("advExBox").classList.toggle("active", !!cur && !cur.exEnd);
     document.getElementById("advSetBox").classList.toggle("active", adv.setRunning);
     document.getElementById("advRestBox").classList.toggle("rest-active", adv.resting || !!adv.exRest);
@@ -2087,8 +2134,9 @@
       document.getElementById("advFinishSetBtn").style.display = "none";
       document.getElementById("advNextSetBtn").style.display = "none";
       document.getElementById("advSkipExRestBtn").style.display = "";
-      document.getElementById("advSkipExRestBtn").textContent = "Skip rest & start (" + advFmt(adv.exRest.left || 0) + " left)";
+      document.getElementById("advSkipExRestBtn").textContent = "Skip rest & start — rested " + advFmt(adv.exRest.elapsed || 0) + " / " + advFmt(adv.exRest.total);
       document.getElementById("advNextExBtn").style.display = "none";
+      document.querySelector("#advRestBox .lbl").textContent = "Rest · " + advFmt(adv.exRest.total);
       renderAdvProgressList();
       return;
     }
@@ -2106,6 +2154,7 @@
     document.getElementById("advNextSetBtn").style.display = (!adv.setRunning && cur.sets.length > 0) ? "" : "none";
     document.getElementById("advNextSetBtn").textContent = "➕ Start another set (" + cur.sets.length + " done)";
     document.getElementById("advSkipExRestBtn").style.display = "none";
+    document.querySelector("#advRestBox .lbl").textContent = "Rest · " + advFmt(adv.restSec);
     var isLast = adv.exIndex === total - 1;
     document.getElementById("advNextExBtn").style.display = "";
     document.getElementById("advNextExBtn").textContent = isLast ? "Next exercise → (none left)" : "Next exercise → (" + adv.exercises[adv.exIndex + 1].name + ")";
@@ -2141,33 +2190,33 @@
     var cur = adv.exercises[adv.exIndex];
     var now = Date.now();
     var dur = Math.max(1, Math.round((now - adv.setStart) / 1000));
-    var wRaw = document.getElementById("advWeight").value;
-    var rRaw = document.getElementById("advReps").value;
+    var vals = advCurrentSetValues();
     cur.sets.push({
-      weight: wRaw === "" ? null : parseFloat(wRaw),
-      reps: rRaw === "" ? null : parseInt(rRaw, 10),
+      weight: vals.weight,
+      unit: vals.unit,
       durationSec: dur,
       restAfterSec: null
     });
     adv.setRunning = false;
     adv.setSeconds = 0;
-    // Auto-start rest timer between sets
+    // Auto-start rest timer between sets — it counts UP from 0
     adv.resting = true;
-    adv.restEnd = Date.now() + adv.restSec * 1000;
-    adv.restLeft = adv.restSec;
     adv.restStart = Date.now();
-    adv.restRecorded = false;
-    // Keep weight/reps for next set (convenient), clear nothing
-    showToast("Set " + cur.sets.length + " logged (" + advFmt(dur) + ") — rest " + advFmt(adv.restSec));
+    adv.restElapsed = 0;
+    adv.restSaved = false;
+    adv.restTargetNotified = false;
+    // Keep value/unit for next set (convenient), clear nothing
+    showToast("Set " + cur.sets.length + " logged (" + advFmt(dur) + ") — rest up to " + advFmt(adv.restSec));
     renderAdvLive();
   });
 
-  // "Start another set" = skip/forgive rest and arm the Start-set button
+  // "Start another set" = stop the rest clock (taken time is stored) and arm Start set
   document.getElementById("advNextSetBtn").addEventListener("click", function(){
     if (!adv || adv.setRunning || adv.exRest) return;
-    advRecordSetRest(Date.now(), false);
+    advRecordSetRest(Date.now());
     adv.resting = false;
-    adv.restLeft = 0;
+    adv.restStart = null;
+    adv.restElapsed = 0;
     renderAdvLive();
     // Focus the Start set button flow: user presses Start set next
     showToast("Ready — press Start set");
@@ -2176,13 +2225,14 @@
   // Reset: clears current set timer + rest timer (keeps logged sets & exercise clock)
   document.getElementById("advResetBtn").addEventListener("click", function(){
     if (!adv) return;
-    if (adv.exRest){ advCompleteExRest(Date.now(), false); return; }
-    advRecordSetRest(Date.now(), false);
+    if (adv.exRest){ advCompleteExRest(Date.now()); return; }
+    advRecordSetRest(Date.now());
     adv.setRunning = false;
     adv.setStart = null;
     adv.setSeconds = 0;
     adv.resting = false;
-    adv.restLeft = 0;
+    adv.restStart = null;
+    adv.restElapsed = 0;
     showToast("Timers reset — logged sets kept");
     renderAdvLive();
   });
@@ -2197,11 +2247,10 @@
     var cur = adv.exercises[adv.exIndex];
     if (!adv.setRunning) return;
     var now = Date.now();
-    var wRaw = document.getElementById("advWeight").value;
-    var rRaw = document.getElementById("advReps").value;
+    var vals = advCurrentSetValues();
     cur.sets.push({
-      weight: wRaw === "" ? null : parseFloat(wRaw),
-      reps: rRaw === "" ? null : parseInt(rRaw, 10),
+      weight: vals.weight,
+      unit: vals.unit,
       durationSec: Math.max(1, Math.round((now - adv.setStart) / 1000)),
       restAfterSec: null
     });
@@ -2212,15 +2261,16 @@
   function advAdvanceExercise(){
     var cur = adv.exercises[adv.exIndex];
     advCloseRunningSet();
-    advRecordSetRest(Date.now(), false);
+    advRecordSetRest(Date.now());
     adv.resting = false;
+    adv.restStart = null;
     cur.exEnd = Date.now();
     cur.exSeconds = (cur.exEnd - cur.exStart) / 1000;
     var toIdx = adv.exIndex + 1;
     if (adv.restExSec > 0){
-      // Timed rest between exercises before the next clock starts
-      adv.exRest = { toIdx: toIdx, start: Date.now(), total: adv.restExSec, left: adv.restExSec, end: Date.now() + adv.restExSec * 1000 };
-      showToast("Rest " + advFmt(adv.restExSec) + " before " + adv.exercises[toIdx].name);
+      // Timed rest between exercises before the next clock starts (counts up)
+      adv.exRest = { toIdx: toIdx, start: Date.now(), total: adv.restExSec, elapsed: 0, notified: false };
+      showToast("Rest up to " + advFmt(adv.restExSec) + " before " + adv.exercises[toIdx].name);
       renderAdvLive();
     } else {
       adv.exGaps[toIdx] = 0;
@@ -2233,17 +2283,16 @@
     var nxt = adv.exercises[toIdx];
     nxt.exStart = Date.now();
     nxt.exSeconds = 0;
-    var pre = previousSetRows(nxt.ex)[0] || { weight: "", reps: "" };
-    document.getElementById("advWeight").value = (pre.weight === null || pre.weight === undefined) ? "" : pre.weight;
-    document.getElementById("advReps").value = (pre.reps === null || pre.reps === undefined) ? "" : pre.reps;
+    var pre = previousSetRows(nxt.ex)[0] || { weight: "", unit: "KG" };
+    advPrefillSetInputs(pre);
     showToast("Next: " + nxt.name);
     renderAdvLive();
   }
 
-  // `full` = countdown reached zero; otherwise the user skipped early.
-  function advCompleteExRest(now, full){
+  // Rest counts up — completing stores however long was actually rested.
+  function advCompleteExRest(now){
     if (!adv || !adv.exRest) return;
-    var gap = full ? adv.exRest.total : Math.max(0, Math.round((now - adv.exRest.start) / 1000));
+    var gap = Math.max(0, Math.round((now - adv.exRest.start) / 1000));
     var toIdx = adv.exRest.toIdx;
     adv.exGaps[toIdx] = gap;
     adv.exRest = null;
@@ -2251,7 +2300,7 @@
   }
   document.getElementById("advSkipExRestBtn").addEventListener("click", function(){
     if (!adv || !adv.exRest) return;
-    advCompleteExRest(Date.now(), false);
+    advCompleteExRest(Date.now());
   });
 
   document.getElementById("advFinishBtn").addEventListener("click", function(){
@@ -2269,8 +2318,9 @@
     }
     var cur = adv.exercises[adv.exIndex];
     advCloseRunningSet();
-    advRecordSetRest(now, false);
+    advRecordSetRest(now);
     adv.resting = false;
+    adv.restStart = null;
     if (cur && !cur.exEnd){ cur.exEnd = now; cur.exSeconds = (cur.exEnd - cur.exStart) / 1000; }
     adv.endStamp = now;
     adv.finished = true;
@@ -2281,7 +2331,7 @@
       a.ex.logs = a.ex.logs || [];
       a.ex.logs.push({
         id: uid(), date: adv.date,
-        sets: a.sets.map(function(s){ return { weight: s.weight, reps: s.reps }; })
+        sets: a.sets.map(function(s){ return { weight: s.weight, unit: (s.unit === "MIN" ? "MIN" : "KG") }; })
       });
       a.ex.logs.sort(function(x, y){ return x.date < y.date ? -1 : 1; });
     });
@@ -2312,7 +2362,7 @@
           plannedSets: a.plannedSets,
           exSeconds: a.exStart ? Math.round(a.exSeconds) : null,
           sets: a.sets.map(function(s){
-            return { weight: s.weight, reps: s.reps, durationSec: s.durationSec, restAfterSec: (s.restAfterSec === undefined ? null : s.restAfterSec) };
+            return { weight: s.weight, unit: (s.unit === "MIN" ? "MIN" : "KG"), durationSec: s.durationSec, restAfterSec: (s.restAfterSec === undefined ? null : s.restAfterSec) };
           })
         };
       })
@@ -2348,7 +2398,7 @@
     var rows = (w.exercises || []).map(function(a, i){
       var setsStr = a.sets.length
         ? a.sets.map(function(s, si){
-            var base = "S" + (si + 1) + ": " + (s.weight == null ? "–" : s.weight) + "×" + (s.reps == null ? "–" : s.reps);
+            var base = "S" + (si + 1) + ": " + fmtSet(s);
             if (s.durationSec != null) base += " (" + advFmt(s.durationSec) + ")";
             if (s.restAfterSec != null) base += " +rest " + advFmt(s.restAfterSec);
             return base;
@@ -2943,21 +2993,24 @@
   });
 
   // ---------- detail / logging ----------
+  // Each set = one value + unit: "60KG" or "1.5MIN". Rows ARE the sets (S1, S2…).
   function renderSetRowsList(rowsArr, containerId){
     var host = document.getElementById(containerId);
     host.innerHTML = "";
     rowsArr.forEach(function(row, idx){
+      if (row.unit !== "MIN" && row.unit !== "KG") row.unit = "KG";
       var div = document.createElement("div");
       div.className = "set-row";
       div.innerHTML =
-        '<div><div class="set-row-label">Weight (kg/lb)</div><input type="number" min="0" step="0.5" class="setWeight" value="'+esc(row.weight)+'" placeholder="60"></div>' +
-        '<div><div class="set-row-label">Reps</div><input type="number" min="0" step="1" class="setReps" value="'+esc(row.reps)+'" placeholder="8"></div>' +
+        '<div><div class="set-row-label">Weight / Minutes</div><input type="number" min="0" step="any" class="setWeight" value="'+esc(row.weight)+'" placeholder="60 or 1.5"></div>' +
+        '<div><div class="set-row-label">Unit</div><select class="setUnit"><option value="KG">KG</option><option value="MIN">MIN</option></select></div>' +
         '<button type="button" class="rm" title="Remove set">✕</button>';
+      div.querySelector(".setUnit").value = row.unit;
       div.querySelector(".setWeight").addEventListener("input", function(ev){ rowsArr[idx].weight = ev.target.value; });
-      div.querySelector(".setReps").addEventListener("input", function(ev){ rowsArr[idx].reps = ev.target.value; });
+      div.querySelector(".setUnit").addEventListener("change", function(ev){ rowsArr[idx].unit = ev.target.value; });
       div.querySelector(".rm").addEventListener("click", function(){
         rowsArr.splice(idx,1);
-        if (!rowsArr.length) rowsArr.push({weight:"",reps:""});
+        if (!rowsArr.length) rowsArr.push({weight:"",unit:"KG"});
         renderSetRowsList(rowsArr, containerId);
       });
       host.appendChild(div);
@@ -2965,7 +3018,7 @@
   }
   function renderSetRows(){ renderSetRowsList(pendingSetRows, "setRows"); }
   document.getElementById("addSetRowBtn").addEventListener("click", function(){
-    pendingSetRows.push({weight:"", reps:""});
+    pendingSetRows.push({weight:"", unit:"KG"});
     renderSetRows();
   });
 
@@ -3019,10 +3072,10 @@
     pendingSetRows = (log.sets || []).map(function(s){
       return {
         weight: (s.weight === null || s.weight === undefined) ? "" : s.weight,
-        reps: (s.reps === null || s.reps === undefined) ? "" : s.reps
+        unit: (s.unit === "MIN" ? "MIN" : "KG")
       };
     });
-    if (!pendingSetRows.length) pendingSetRows = [{weight:"", reps:""}];
+    if (!pendingSetRows.length) pendingSetRows = [{weight:"", unit:"KG"}];
     renderSetRows();
     document.getElementById("saveLogBtn").textContent = "Update session";
     document.getElementById("cancelEditBtn").style.display = "";
@@ -3056,7 +3109,7 @@
     }
     host.innerHTML = "";
     ex.logs.slice().reverse().forEach(function(log){
-      var setsStr = (log.sets||[]).map(function(s){ return (s.weight||"–") + "×" + (s.reps||"–"); }).join(", ");
+      var setsStr = (log.sets||[]).map(function(s){ return fmtSet(s); }).join(", ");
       var top = topWeightOfLog(log);
       var row = document.createElement("div");
       row.className = "log-entry" + (historyEditMode ? "" : " locked");
@@ -3113,8 +3166,8 @@
     var ex = found.ex;
     var date = document.getElementById("logDate").value || todayStr();
     var sets = pendingSetRows
-      .filter(function(r){ return r.weight !== "" || r.reps !== ""; })
-      .map(function(r){ return { weight: r.weight === "" ? null : parseFloat(r.weight), reps: r.reps === "" ? null : parseInt(r.reps,10) }; });
+      .filter(function(r){ return r.weight !== ""; })
+      .map(function(r){ return { weight: r.weight === "" ? null : parseFloat(r.weight), unit: (r.unit === "MIN" ? "MIN" : "KG") }; });
     if (!sets.length){ showToast("Add at least one set first"); return; }
     ex.logs = ex.logs || [];
     if (editingLogId){
@@ -3130,7 +3183,7 @@
     saveState();
     cancelLogEdit();
     document.getElementById("logDate").value = todayStr();
-    pendingSetRows = [{weight:"", reps:""}];
+    pendingSetRows = [{weight:"", unit:"KG"}];
     renderSetRows();
     renderLogList(ex);
     renderSpark(ex);
@@ -3156,7 +3209,7 @@
   document.getElementById("addCatBtn").addEventListener("click", openCategoryAdd);
 
   // ==================== SETTINGS / BACKUP FOLDER / INSTALL ====================
-  var APP_VERSION = "v5.0 — Weight lock · Plan history · Rest times in brief";
+  var APP_VERSION = "v6.0 — Count-up rest · Sets as KG/MIN values";
   var backupDirHandle = null;
   var backupDirStatus = "boot"; // unsupported | unset | prompt | granted | denied
   var deferredInstallPrompt = null;
