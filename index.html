@@ -387,6 +387,36 @@
   .plan-item-row .pn { font-weight: 600; font-size: 13.5px; }
   .plan-item-row .pm { font-size: 11.5px; color: var(--text-dim); }
   .plan-item-row.removed { opacity: 0.55; font-style: italic; }
+  .plan-hist-row {
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    margin-bottom: 7px;
+    overflow: hidden;
+  }
+  .plan-hist-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    border: none;
+    background: var(--surface);
+    color: var(--text);
+    padding: 10px 12px;
+    font-size: 13.5px;
+    font-weight: 700;
+    text-align: left;
+  }
+  .plan-hist-head .chev { color: var(--text-dim); font-size: 12px; flex: none; }
+  .plan-hist-head .mode-tag {
+    font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;
+    background: var(--surface-2); color: var(--text-dim);
+    border-radius: 999px; padding: 2px 8px; flex: none;
+  }
+  .plan-hist-head .mode-tag.adv { background: var(--accent-soft); color: var(--accent); }
+  .plan-hist-head .hsub { margin-left: auto; font-size: 11.5px; color: var(--text-dim); font-weight: 600; white-space: nowrap; }
+  button.hdel { background: none; border: none; color: var(--text-dim); font-size: 14px; flex: none; cursor: pointer; padding: 10px 4px; }
+  button.hdel:hover { color: var(--danger); }
+  .plan-hist-body { border-top: 1px dashed var(--border); padding: 4px 12px 12px; }
 
   /* ---------- Calendar ---------- */
   .cal-head {
@@ -471,6 +501,7 @@
   .day-list-item .dnote.bad { color: var(--danger); font-weight: 700; }
   .day-meta { display: flex; gap: 8px; margin-bottom: 12px; align-items: flex-end; }
   .day-meta .field { flex: 1; margin-bottom: 0; }
+  #dayWeight[readonly] { background: var(--surface-2); font-weight: 700; }
   .status-badge { display: inline-flex; align-items: center; font-size: 12px; font-weight: 800; border-radius: 999px; padding: 4px 10px; margin-top: 6px; }
   .status-badge.done { background: var(--good-soft); color: var(--good); }
   .status-badge.missed { background: var(--surface-2); color: var(--danger); border: 1px solid var(--danger); }
@@ -940,6 +971,8 @@
       <button class="close-x" data-close="planDetailOverlay" aria-label="Close">✕</button>
     </div>
     <div id="planDetailList"></div>
+    <div class="section-title">History — dates this plan was executed</div>
+    <div id="planHistoryList"></div>
     <div class="sheet-actions">
       <button type="button" class="btn primary" id="startPlanBtn">▶ Basic mode</button>
       <button type="button" class="btn primary" id="startAdvBtn">⏱ Advanced mode</button>
@@ -1011,6 +1044,10 @@
         <label for="advRestSec">Rest between sets (seconds)</label>
         <input id="advRestSec" type="number" min="5" max="900" step="5" value="60">
       </div>
+      <div class="field" style="margin-bottom:10px;">
+        <label for="advRestExSec">Rest between exercises (seconds)</label>
+        <input id="advRestExSec" type="number" min="0" max="1800" step="5" value="90">
+      </div>
       <div class="field">
         <label>Sets planned per exercise (you can do more or fewer)</label>
         <div id="advSetsList"></div>
@@ -1052,6 +1089,7 @@
       </div>
       <div class="adv-btn-grid">
         <button type="button" class="btn" id="advNextExBtn">Next exercise →</button>
+        <button type="button" class="btn primary" id="advSkipExRestBtn" style="display:none;">Skip rest &amp; start</button>
         <button type="button" class="btn danger-outline" id="advFinishBtn">■ Finish workout</button>
       </div>
 
@@ -1214,7 +1252,8 @@
       ],
       schedule: [],
       weights: {},
-      restDays: []
+      restDays: [],
+      workouts: []
     };
   }
 
@@ -1228,6 +1267,7 @@
       if (!Array.isArray(parsed.schedule)) parsed.schedule = [];
       if (!parsed.weights || typeof parsed.weights !== "object") parsed.weights = {};
       if (!Array.isArray(parsed.restDays)) parsed.restDays = [];
+      if (!Array.isArray(parsed.workouts)) parsed.workouts = [];
       parsed.categories.forEach(function(c){
         (c.exercises||[]).forEach(function(e){ e.muscle = normalizeMuscles(e.muscle); });
       });
@@ -1511,13 +1551,14 @@
     state.plans.forEach(function(plan){
       var validCount = plan.items.filter(resolvePlanItem).length;
       var catTags = planCategoriesLabel(plan).map(function(n){ return '<span class="tag">'+esc(n)+'</span>'; }).join("");
+      var sessCount = (state.workouts || []).filter(function(w){ return w.planId === plan.id; }).length;
       var card = document.createElement("div");
       card.className = "card";
       card.innerHTML =
         '<button class="card-btn" data-plan="'+plan.id+'">' +
           '<h3>'+esc(plan.name)+'</h3>' +
           '<div class="tag-row">'+catTags+'</div>' +
-          '<div class="last">'+validCount+' exercise'+(validCount===1?"":"s")+' in this plan</div>' +
+          '<div class="last">'+validCount+' exercise'+(validCount===1?"":"s")+' in this plan · '+sessCount+' session'+(sessCount===1?"":"s")+'</div>' +
         '</button>' +
         '<div class="card-actions"><button type="button" class="btn small primary start-plan-card-btn">▶ Basic</button><button type="button" class="btn small primary adv-plan-card-btn">⏱ Advanced</button></div>';
       card.querySelector(".card-btn").addEventListener("click", function(){ openPlanDetail(plan.id); });
@@ -1623,6 +1664,7 @@
     var plan = state.plans.find(function(p){ return p.id === planId; });
     if (!plan) return;
     detailPlanId = planId;
+    planHistOpenId = null;
     document.getElementById("planDetailTitle").textContent = plan.name;
     document.getElementById("planDetailSub").textContent = plan.items.length + " exercise" + (plan.items.length===1?"":"s") + " across " + planCategoriesLabel(plan).length + " categor" + (planCategoriesLabel(plan).length===1?"y":"ies");
     var host = document.getElementById("planDetailList");
@@ -1639,7 +1681,78 @@
       }
       host.appendChild(row);
     });
+    renderPlanHistory(planId);
     openOverlay("planDetailOverlay");
+  }
+
+  var planHistOpenId = null;
+
+  function planWorkouts(planId){
+    return (state.workouts || [])
+      .filter(function(w){ return w.planId === planId; })
+      .sort(function(a, b){
+        if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+        return (b.endStamp || 0) - (a.endStamp || 0);
+      });
+  }
+
+  function renderPlanHistory(planId){
+    var host = document.getElementById("planHistoryList");
+    var list = planWorkouts(planId);
+    host.innerHTML = "";
+    if (!list.length){
+      host.innerHTML = "<div style='font-size:13px;color:var(--text-dim);margin-bottom:10px;'>No sessions yet — run this plan in Basic or Advanced mode.</div>";
+      return;
+    }
+    list.forEach(function(w){
+      var t = workoutTotals(w);
+      var totalSec = (w.startStamp && w.endStamp) ? advFmt(Math.round((w.endStamp - w.startStamp) / 1000)) : "—";
+      var wrap = document.createElement("div");
+      wrap.className = "plan-hist-row";
+      var open = planHistOpenId === w.id;
+      var head = document.createElement("div");
+      head.style.display = "flex";
+      var toggle = document.createElement("button");
+      toggle.className = "plan-hist-head";
+      toggle.style.flex = "1";
+      toggle.innerHTML =
+        "<span class='chev'>" + (open ? "▾" : "▸") + "</span>" +
+        "<span>" + esc(w.date) + "</span>" +
+        "<span class='mode-tag" + (w.mode === "advanced" ? " adv" : "") + "'>" + (w.mode === "advanced" ? "⏱ Adv" : "▶ Basic") + "</span>" +
+        "<span class='hsub'>" + t.sets + " sets · " + esc(totalSec) + "</span>";
+      toggle.addEventListener("click", function(){
+        planHistOpenId = (planHistOpenId === w.id) ? null : w.id;
+        renderPlanHistory(planId);
+      });
+      head.appendChild(toggle);
+      var del = document.createElement("button");
+      del.className = "hdel";
+      del.title = "Delete this record";
+      del.textContent = "🗑";
+      del.addEventListener("click", function(ev){
+        ev.stopPropagation();
+        if (!confirm("Delete the " + w.date + " record of this plan? Exercise logs stay in the Library.")) return;
+        state.workouts = (state.workouts || []).filter(function(x){ return x.id !== w.id; });
+        if (planHistOpenId === w.id) planHistOpenId = null;
+        saveState();
+        renderPlanHistory(planId);
+        render();
+      });
+      // wrap del in a head-styled span for alignment
+      var delWrap = document.createElement("span");
+      delWrap.style.cssText = "display:flex;align-items:center;padding-right:8px;";
+      delWrap.appendChild(del);
+      head.appendChild(delWrap);
+      head.style.alignItems = "stretch";
+      wrap.appendChild(head);
+      if (open){
+        var body = document.createElement("div");
+        body.className = "plan-hist-body";
+        body.innerHTML = workoutBriefHtml(w);
+        wrap.appendChild(body);
+      }
+      host.appendChild(wrap);
+    });
   }
   document.getElementById("editThisPlanBtn").addEventListener("click", function(){
     closeOverlay("planDetailOverlay");
@@ -1659,6 +1772,8 @@
   var sessionValidItems = [];
   var sessionIndex = 0;
   var sessionSetRows = [{weight:"", reps:""}];
+  var sessionStartStamp = null;
+  var sessionSavedByEx = {}; // exId -> logId logged during this Basic run
 
   function previousSetRows(ex){
     if (!ex.logs || !ex.logs.length) return [{weight:"", reps:""}];
@@ -1681,6 +1796,8 @@
     sessionValidItems = resolved;
     sessionIndex = 0;
     sessionSetRows = [{weight:"", reps:""}];
+    sessionStartStamp = Date.now();
+    sessionSavedByEx = {};
     document.getElementById("sessionTitle").textContent = plan.name;
     document.getElementById("sessionDate").value = todayStr();
     document.getElementById("sessionBody").style.display = "";
@@ -1718,14 +1835,17 @@
       .map(function(r){ return { weight: r.weight === "" ? null : parseFloat(r.weight), reps: r.reps === "" ? null : parseInt(r.reps,10) }; });
     if (!sets.length) return false;
     step.ex.logs = step.ex.logs || [];
-    step.ex.logs.push({ id: uid(), date: date, sets: sets });
+    var logId = uid();
+    step.ex.logs.push({ id: logId, date: date, sets: sets });
     step.ex.logs.sort(function(a,b){ return a.date < b.date ? -1 : 1; });
+    sessionSavedByEx[step.ex.id] = logId;
     saveState();
     return true;
   }
 
   function sessionAdvance(){
     if (sessionIndex >= sessionValidItems.length - 1){
+      saveBasicWorkoutRecord();
       document.getElementById("sessionProgressFill").style.width = "100%";
       document.getElementById("sessionBody").style.display = "none";
       document.getElementById("sessionDone").style.display = "";
@@ -1734,6 +1854,42 @@
       sessionIndex++;
       renderSessionStep();
     }
+  }
+
+  // Persist a workout record for the Basic run so plan history can show it.
+  function saveBasicWorkoutRecord(){
+    var plan = state.plans.find(function(p){ return p.id === sessionPlanId; });
+    if (!plan) return;
+    var date = (document.getElementById("sessionDate") && document.getElementById("sessionDate").value) || todayStr();
+    var exercises = [];
+    sessionValidItems.forEach(function(step){
+      var logId = sessionSavedByEx[step.ex.id];
+      if (!logId) return; // skipped exercise
+      var log = (step.ex.logs || []).find(function(l){ return l.id === logId; });
+      if (!log) return;
+      exercises.push({
+        name: step.ex.name,
+        plannedSets: null,
+        exSeconds: null,
+        sets: (log.sets || []).map(function(s){ return { weight: s.weight, reps: s.reps, durationSec: null, restAfterSec: null }; })
+      });
+    });
+    if (!exercises.length) return;
+    state.workouts = state.workouts || [];
+    state.workouts.push({
+      id: uid(),
+      planId: sessionPlanId,
+      planName: plan.name,
+      date: date,
+      mode: "basic",
+      startStamp: sessionStartStamp,
+      endStamp: Date.now(),
+      restSetSec: null,
+      restExSec: null,
+      exGaps: [],
+      exercises: exercises
+    });
+    saveState();
   }
 
   document.getElementById("sessionAddSetRowBtn").addEventListener("click", function(){
@@ -1780,6 +1936,16 @@
   }
   function advStopTick(){ if (advTickInt){ clearInterval(advTickInt); advTickInt = null; } }
 
+  // Record the elapsed between-sets rest onto the last logged set of the
+  // current exercise (once per rest). `full` = rest ran its whole countdown.
+  function advRecordSetRest(now, full){
+    if (!adv || adv.restRecorded || !adv.restStart) return;
+    var cur = adv.exercises[adv.exIndex];
+    var taken = full ? adv.restSec : Math.max(0, Math.round((now - adv.restStart) / 1000));
+    if (cur.sets.length) cur.sets[cur.sets.length - 1].restAfterSec = taken;
+    adv.restRecorded = true;
+  }
+
   function openAdvSetup(planId){
     var plan = state.plans.find(function(p){ return p.id === planId; });
     if (!plan) return;
@@ -1790,6 +1956,7 @@
       planName: plan.name,
       date: todayStr(),
       restSec: 60,
+      restExSec: 90,
       startStamp: null,
       endStamp: null,
       exIndex: 0,
@@ -1798,6 +1965,10 @@
       setSeconds: 0,
       resting: false,
       restLeft: 0,
+      restStart: null,
+      restRecorded: true,
+      exRest: null, // { toIdx, start, total, end } — rest phase between exercises
+      exGaps: [],
       finished: false,
       exercises: resolved.map(function(r){
         return { catId: r.cat.id, exId: r.ex.id, name: r.ex.name, catName: r.cat.name,
@@ -1809,6 +1980,7 @@
     document.getElementById("advSub").textContent = resolved.length + " exercises · timed mode";
     document.getElementById("advDate").value = todayStr();
     document.getElementById("advRestSec").value = 60;
+    document.getElementById("advRestExSec").value = 90;
     var host = document.getElementById("advSetsList");
     host.innerHTML = "";
     adv.exercises.forEach(function(a, i){
@@ -1837,13 +2009,16 @@
     if (!adv) return;
     var d = document.getElementById("advDate").value || todayStr();
     var rs = parseInt(document.getElementById("advRestSec").value, 10);
+    var re = parseInt(document.getElementById("advRestExSec").value, 10);
     adv.date = d;
     adv.restSec = (isNaN(rs) || rs < 5) ? 60 : Math.min(900, rs);
+    adv.restExSec = (isNaN(re) || re < 0) ? 90 : Math.min(1800, re);
     adv.startStamp = Date.now();
     adv.exIndex = 0;
     adv.exercises.forEach(function(a){ a.sets = []; a.exStart = null; a.exEnd = null; a.exSeconds = 0; });
     adv.exercises[0].exStart = Date.now();
     adv.setRunning = false; adv.resting = false; adv.restLeft = 0; adv.setSeconds = 0;
+    adv.restStart = null; adv.restRecorded = true; adv.exRest = null; adv.exGaps = [];
     // Prefill first set weight/reps from last log for convenience
     var first = previousSetRows(adv.exercises[0].ex)[0] || { weight: "", reps: "" };
     document.getElementById("advWeight").value = (first.weight === null || first.weight === undefined) ? "" : first.weight;
@@ -1867,10 +2042,16 @@
       // restLeft is computed from restEnd timestamp
       adv.restLeft = Math.max(0, Math.ceil((adv.restEnd - now) / 1000));
       if (adv.restLeft <= 0){
+        advRecordSetRest(now, true);
         adv.resting = false;
         showToast("Rest over — start your next set");
         renderAdvLive();
       }
+    }
+    if (adv.exRest){
+      var left = Math.max(0, Math.ceil((adv.exRest.end - now) / 1000));
+      adv.exRest.left = left;
+      if (left <= 0) advCompleteExRest(now, true);
     }
     var tEl = document.getElementById("advTotalTimer");
     if (tEl) tEl.textContent = advFmt((now - adv.startStamp) / 1000);
@@ -1879,10 +2060,10 @@
     var sEl = document.getElementById("advSetTimer");
     if (sEl) sEl.textContent = adv.setRunning ? advFmt(adv.setSeconds) : "00:00";
     var rEl = document.getElementById("advRestTimer");
-    if (rEl) rEl.textContent = adv.resting ? advFmt(adv.restLeft) : "--:--";
+    if (rEl) rEl.textContent = adv.exRest ? advFmt(adv.exRest.left) : (adv.resting ? advFmt(adv.restLeft) : "--:--");
     document.getElementById("advExBox").classList.toggle("active", !!cur && !cur.exEnd);
     document.getElementById("advSetBox").classList.toggle("active", adv.setRunning);
-    document.getElementById("advRestBox").classList.toggle("rest-active", adv.resting);
+    document.getElementById("advRestBox").classList.toggle("rest-active", adv.resting || !!adv.exRest);
     document.getElementById("advStartTimeLine").textContent =
       "Started " + advClock(adv.startStamp) + " · " + adv.date;
   }
@@ -1890,8 +2071,28 @@
   function renderAdvLive(){
     if (!adv) return;
     advTick();
-    var cur = adv.exercises[adv.exIndex];
     var total = adv.exercises.length;
+    if (adv.exRest){
+      // Between-exercises rest phase — next exercise hasn't started its clock yet
+      var nxt = adv.exercises[adv.exRest.toIdx];
+      document.getElementById("advExPos").textContent =
+        "Rest before exercise " + (adv.exRest.toIdx + 1) + " of " + total;
+      document.getElementById("advExName").textContent = "💤 " + nxt.name;
+      document.getElementById("advTags").innerHTML =
+        muscleTagsHtml(nxt.ex) + '<span class="tag method">' + esc(nxt.ex.methodology) + "</span>" +
+        (nxt.ex.purposes || []).map(function(p){ return '<span class="tag">' + esc(p) + "</span>"; }).join("");
+      var vb2 = document.getElementById("advVideoBtn");
+      if (nxt.ex.video){ vb2.href = nxt.ex.video; vb2.style.display = "flex"; } else { vb2.style.display = "none"; }
+      document.getElementById("advStartSetBtn").style.display = "none";
+      document.getElementById("advFinishSetBtn").style.display = "none";
+      document.getElementById("advNextSetBtn").style.display = "none";
+      document.getElementById("advSkipExRestBtn").style.display = "";
+      document.getElementById("advSkipExRestBtn").textContent = "Skip rest & start (" + advFmt(adv.exRest.left || 0) + " left)";
+      document.getElementById("advNextExBtn").style.display = "none";
+      renderAdvProgressList();
+      return;
+    }
+    var cur = adv.exercises[adv.exIndex];
     document.getElementById("advExPos").textContent =
       "Exercise " + (adv.exIndex + 1) + " of " + total + " · Set " + (cur.sets.length + (adv.setRunning ? 1 : 1)) + " of " + cur.plannedSets + " planned";
     document.getElementById("advExName").textContent = cur.name;
@@ -1904,25 +2105,31 @@
     document.getElementById("advFinishSetBtn").style.display = adv.setRunning ? "" : "none";
     document.getElementById("advNextSetBtn").style.display = (!adv.setRunning && cur.sets.length > 0) ? "" : "none";
     document.getElementById("advNextSetBtn").textContent = "➕ Start another set (" + cur.sets.length + " done)";
+    document.getElementById("advSkipExRestBtn").style.display = "none";
     var isLast = adv.exIndex === total - 1;
+    document.getElementById("advNextExBtn").style.display = "";
     document.getElementById("advNextExBtn").textContent = isLast ? "Next exercise → (none left)" : "Next exercise → (" + adv.exercises[adv.exIndex + 1].name + ")";
     document.getElementById("advNextExBtn").disabled = isLast;
     document.getElementById("advNextExBtn").style.opacity = isLast ? 0.4 : 1;
-    // Progress list
+    renderAdvProgressList();
+  }
+
+  function renderAdvProgressList(){
     var host = document.getElementById("advLiveList");
     host.innerHTML = "";
     adv.exercises.forEach(function(a, i){
       var row = document.createElement("div");
-      row.className = "adv-live-row" + (i === adv.exIndex ? " current" : "") + (a.exEnd ? " done" : "");
+      var restingHere = adv.exRest && adv.exRest.toIdx === i;
+      row.className = "adv-live-row" + (i === adv.exIndex && !adv.exRest ? " current" : "") + (a.exEnd ? " done" : "") + (restingHere ? " current" : "");
       var status = a.exEnd ? "✔ " + advFmt(a.exSeconds) + " · " + a.sets.length + " sets"
-        : (i === adv.exIndex ? advFmt(a.exSeconds) + " · " + a.sets.length + " sets" : a.sets.length + " sets");
+        : (restingHere ? "💤 resting" : (i === adv.exIndex && !adv.exRest ? advFmt(a.exSeconds) + " · " + a.sets.length + " sets" : a.sets.length + " sets"));
       row.innerHTML = "<span>" + (i + 1) + ". " + esc(a.name) + "</span><span class='st'>" + esc(status) + "</span>";
       host.appendChild(row);
     });
   }
 
   document.getElementById("advStartSetBtn").addEventListener("click", function(){
-    if (!adv || adv.setRunning || adv.resting) return;
+    if (!adv || adv.setRunning || adv.resting || adv.exRest) return;
     adv.setRunning = true;
     adv.setStart = Date.now();
     adv.setSeconds = 0;
@@ -1939,7 +2146,8 @@
     cur.sets.push({
       weight: wRaw === "" ? null : parseFloat(wRaw),
       reps: rRaw === "" ? null : parseInt(rRaw, 10),
-      durationSec: dur
+      durationSec: dur,
+      restAfterSec: null
     });
     adv.setRunning = false;
     adv.setSeconds = 0;
@@ -1947,6 +2155,8 @@
     adv.resting = true;
     adv.restEnd = Date.now() + adv.restSec * 1000;
     adv.restLeft = adv.restSec;
+    adv.restStart = Date.now();
+    adv.restRecorded = false;
     // Keep weight/reps for next set (convenient), clear nothing
     showToast("Set " + cur.sets.length + " logged (" + advFmt(dur) + ") — rest " + advFmt(adv.restSec));
     renderAdvLive();
@@ -1954,7 +2164,8 @@
 
   // "Start another set" = skip/forgive rest and arm the Start-set button
   document.getElementById("advNextSetBtn").addEventListener("click", function(){
-    if (!adv || adv.setRunning) return;
+    if (!adv || adv.setRunning || adv.exRest) return;
+    advRecordSetRest(Date.now(), false);
     adv.resting = false;
     adv.restLeft = 0;
     renderAdvLive();
@@ -1965,6 +2176,8 @@
   // Reset: clears current set timer + rest timer (keeps logged sets & exercise clock)
   document.getElementById("advResetBtn").addEventListener("click", function(){
     if (!adv) return;
+    if (adv.exRest){ advCompleteExRest(Date.now(), false); return; }
+    advRecordSetRest(Date.now(), false);
     adv.setRunning = false;
     adv.setStart = null;
     adv.setSeconds = 0;
@@ -1975,30 +2188,49 @@
   });
 
   document.getElementById("advNextExBtn").addEventListener("click", function(){
-    if (!adv) return;
+    if (!adv || adv.exRest) return;
     if (adv.exIndex >= adv.exercises.length - 1) return;
     advAdvanceExercise();
   });
 
+  function advCloseRunningSet(){
+    var cur = adv.exercises[adv.exIndex];
+    if (!adv.setRunning) return;
+    var now = Date.now();
+    var wRaw = document.getElementById("advWeight").value;
+    var rRaw = document.getElementById("advReps").value;
+    cur.sets.push({
+      weight: wRaw === "" ? null : parseFloat(wRaw),
+      reps: rRaw === "" ? null : parseInt(rRaw, 10),
+      durationSec: Math.max(1, Math.round((now - adv.setStart) / 1000)),
+      restAfterSec: null
+    });
+    adv.setRunning = false;
+    adv.setSeconds = 0;
+  }
+
   function advAdvanceExercise(){
     var cur = adv.exercises[adv.exIndex];
-    if (adv.setRunning){
-      // Auto-close a running set before leaving the exercise
-      var now = Date.now();
-      var wRaw = document.getElementById("advWeight").value;
-      var rRaw = document.getElementById("advReps").value;
-      cur.sets.push({
-        weight: wRaw === "" ? null : parseFloat(wRaw),
-        reps: rRaw === "" ? null : parseInt(rRaw, 10),
-        durationSec: Math.max(1, Math.round((now - adv.setStart) / 1000))
-      });
-      adv.setRunning = false;
-    }
+    advCloseRunningSet();
+    advRecordSetRest(Date.now(), false);
     adv.resting = false;
     cur.exEnd = Date.now();
     cur.exSeconds = (cur.exEnd - cur.exStart) / 1000;
-    adv.exIndex++;
-    var nxt = adv.exercises[adv.exIndex];
+    var toIdx = adv.exIndex + 1;
+    if (adv.restExSec > 0){
+      // Timed rest between exercises before the next clock starts
+      adv.exRest = { toIdx: toIdx, start: Date.now(), total: adv.restExSec, left: adv.restExSec, end: Date.now() + adv.restExSec * 1000 };
+      showToast("Rest " + advFmt(adv.restExSec) + " before " + adv.exercises[toIdx].name);
+      renderAdvLive();
+    } else {
+      adv.exGaps[toIdx] = 0;
+      advStartNextExercise(toIdx);
+    }
+  }
+
+  function advStartNextExercise(toIdx){
+    adv.exIndex = toIdx;
+    var nxt = adv.exercises[toIdx];
     nxt.exStart = Date.now();
     nxt.exSeconds = 0;
     var pre = previousSetRows(nxt.ex)[0] || { weight: "", reps: "" };
@@ -2008,6 +2240,20 @@
     renderAdvLive();
   }
 
+  // `full` = countdown reached zero; otherwise the user skipped early.
+  function advCompleteExRest(now, full){
+    if (!adv || !adv.exRest) return;
+    var gap = full ? adv.exRest.total : Math.max(0, Math.round((now - adv.exRest.start) / 1000));
+    var toIdx = adv.exRest.toIdx;
+    adv.exGaps[toIdx] = gap;
+    adv.exRest = null;
+    advStartNextExercise(toIdx);
+  }
+  document.getElementById("advSkipExRestBtn").addEventListener("click", function(){
+    if (!adv || !adv.exRest) return;
+    advCompleteExRest(Date.now(), false);
+  });
+
   document.getElementById("advFinishBtn").addEventListener("click", function(){
     if (!adv) return;
     if (!confirm("Finish the workout now and see the brief?")) return;
@@ -2016,17 +2262,15 @@
 
   function advFinishWorkout(){
     var now = Date.now();
-    var cur = adv.exercises[adv.exIndex];
-    if (adv.setRunning && cur){
-      var wRaw = document.getElementById("advWeight").value;
-      var rRaw = document.getElementById("advReps").value;
-      cur.sets.push({
-        weight: wRaw === "" ? null : parseFloat(wRaw),
-        reps: rRaw === "" ? null : parseInt(rRaw, 10),
-        durationSec: Math.max(1, Math.round((now - adv.setStart) / 1000))
-      });
-      adv.setRunning = false;
+    if (adv.exRest){
+      // Finished during the between-exercises rest — next exercise stays skipped
+      adv.exGaps[adv.exRest.toIdx] = Math.max(0, Math.round((now - adv.exRest.start) / 1000));
+      adv.exRest = null;
     }
+    var cur = adv.exercises[adv.exIndex];
+    advCloseRunningSet();
+    advRecordSetRest(now, false);
+    adv.resting = false;
     if (cur && !cur.exEnd){ cur.exEnd = now; cur.exSeconds = (cur.exEnd - cur.exStart) / 1000; }
     adv.endStamp = now;
     adv.finished = true;
@@ -2041,29 +2285,93 @@
       });
       a.ex.logs.sort(function(x, y){ return x.date < y.date ? -1 : 1; });
     });
+    // Persist the full timed brief (periods + rests) as a workout record
+    var w = advToWorkout();
+    state.workouts = state.workouts || [];
+    state.workouts.push(w);
     saveState();
     render();
-    showAdvSummary();
+    showAdvSummary(w);
   }
 
-  function showAdvSummary(){
-    var totalSec = Math.round((adv.endStamp - adv.startStamp) / 1000);
-    document.getElementById("advSummaryTitle").textContent = adv.planName + " — brief";
-    document.getElementById("advSummarySub").textContent = adv.date + " · " + adv.exercises.length + " exercises";
-    var rows = adv.exercises.map(function(a, i){
+  function advToWorkout(){
+    return {
+      id: uid(),
+      planId: adv.planId,
+      planName: adv.planName,
+      date: adv.date,
+      mode: "advanced",
+      startStamp: adv.startStamp,
+      endStamp: adv.endStamp,
+      restSetSec: adv.restSec,
+      restExSec: adv.restExSec,
+      exGaps: adv.exercises.map(function(a, i){ return adv.exGaps[i] || 0; }),
+      exercises: adv.exercises.map(function(a){
+        return {
+          name: a.name,
+          plannedSets: a.plannedSets,
+          exSeconds: a.exStart ? Math.round(a.exSeconds) : null,
+          sets: a.sets.map(function(s){
+            return { weight: s.weight, reps: s.reps, durationSec: s.durationSec, restAfterSec: (s.restAfterSec === undefined ? null : s.restAfterSec) };
+          })
+        };
+      })
+    };
+  }
+
+  function workoutTotals(w){
+    var sets = 0, restTaken = 0;
+    (w.exercises || []).forEach(function(a){
+      (a.sets || []).forEach(function(s){
+        sets++;
+        if (s.restAfterSec != null) restTaken += s.restAfterSec;
+      });
+    });
+    var gaps = (w.exGaps || []).reduce(function(n, g){ return n + (g || 0); }, 0);
+    return { sets: sets, restTaken: restTaken, gaps: gaps };
+  }
+
+  // Shared brief renderer: used by the Advanced finish screen AND plan history.
+  function workoutBriefHtml(w){
+    var t = workoutTotals(w);
+    var totalSec = (w.startStamp && w.endStamp) ? Math.round((w.endStamp - w.startStamp) / 1000) : null;
+    var restSetLine, restExLine;
+    if (w.mode === "advanced"){
+      var restsPlanned = t.sets ? (t.sets + " × " + advFmt(w.restSetSec || 0)) : "—";
+      restSetLine = "<div class='adv-kv'><span>😴 Rest between sets</span><b>" + esc(restsPlanned) + " planned · " + advFmt(t.restTaken) + " taken</b></div>";
+      var gapsPlanned = (w.exercises.length > 1) ? (((w.exercises.length - 1) + " × " + advFmt(w.restExSec || 0))) : "—";
+      restExLine = "<div class='adv-kv'><span>💤 Rest between exercises</span><b>" + esc(gapsPlanned) + " planned · " + advFmt(t.gaps) + " taken</b></div>";
+    } else {
+      restSetLine = "<div class='adv-kv'><span>😴 Rest between sets</span><b>— (Basic mode)</b></div>";
+      restExLine = "<div class='adv-kv'><span>💤 Rest between exercises</span><b>— (Basic mode)</b></div>";
+    }
+    var rows = (w.exercises || []).map(function(a, i){
       var setsStr = a.sets.length
         ? a.sets.map(function(s, si){
-            return "S" + (si + 1) + ": " + (s.weight == null ? "–" : s.weight) + "×" + (s.reps == null ? "–" : s.reps) + " (" + advFmt(s.durationSec) + ")";
+            var base = "S" + (si + 1) + ": " + (s.weight == null ? "–" : s.weight) + "×" + (s.reps == null ? "–" : s.reps);
+            if (s.durationSec != null) base += " (" + advFmt(s.durationSec) + ")";
+            if (s.restAfterSec != null) base += " +rest " + advFmt(s.restAfterSec);
+            return base;
           }).join(", ")
         : "skipped";
-      return "<tr><td>" + (i + 1) + ". " + esc(a.name) + "</td><td>" + advFmt(a.exSeconds) + "</td><td>" + a.sets.length + "/" + a.plannedSets + "</td><td>" + esc(setsStr) + "</td></tr>";
+      var period = (a.exSeconds != null) ? advFmt(a.exSeconds) : "—";
+      var planned = (a.plannedSets != null) ? (a.sets.length + "/" + a.plannedSets) : String(a.sets.length);
+      return "<tr><td>" + (i + 1) + ". " + esc(a.name) + "</td><td>" + period + "</td><td>" + esc(planned) + "</td><td>" + esc(setsStr) + "</td></tr>";
     }).join("");
-    document.getElementById("advSummaryBody").innerHTML =
-      "<div class='adv-kv'><span>🏁 Beginning (real time)</span><b>" + advClock(adv.startStamp) + "</b></div>" +
-      "<div class='adv-kv'><span>🏁 Finish (real time)</span><b>" + advClock(adv.endStamp) + "</b></div>" +
-      "<div class='adv-kv'><span>⏱ Total period</span><b>" + advFmt(totalSec) + "</b></div>" +
-      "<div class='adv-kv'><span>💪 Sets logged</span><b>" + adv.exercises.reduce(function(n, a){ return n + a.sets.length; }, 0) + "</b></div>" +
-      "<table class='adv-summary-table'><tr><th>Exercise</th><th>Period</th><th>Sets</th><th>Detail</th></tr>" + rows + "</table>";
+    return (
+      "<div class='adv-kv'><span>🏁 Beginning (real time)</span><b>" + (w.startStamp ? advClock(w.startStamp) : "—") + "</b></div>" +
+      "<div class='adv-kv'><span>🏁 Finish (real time)</span><b>" + (w.endStamp ? advClock(w.endStamp) : "—") + "</b></div>" +
+      "<div class='adv-kv'><span>⏱ Total period</span><b>" + (totalSec != null ? advFmt(totalSec) : "—") + "</b></div>" +
+      restSetLine + restExLine +
+      "<div class='adv-kv'><span>💪 Sets logged</span><b>" + t.sets + "</b></div>" +
+      "<table class='adv-summary-table'><tr><th>Exercise</th><th>Period</th><th>Sets</th><th>Detail</th></tr>" + rows + "</table>"
+    );
+  }
+
+  function showAdvSummary(w){
+    document.getElementById("advSummaryTitle").textContent = w.planName + " — brief";
+    document.getElementById("advSummarySub").textContent = w.date + " · " + w.exercises.length + " exercises";
+    document.getElementById("advSummaryBody").innerHTML = workoutBriefHtml(w);
     closeOverlay("advOverlay");
     openOverlay("advSummaryOverlay");
   }
@@ -2272,6 +2580,7 @@
     var wInput = document.getElementById("dayWeight");
     var wNow = dayWeight(dateStr);
     wInput.value = (wNow !== null) ? wNow : "";
+    syncDayWeightUI();
     document.getElementById("dayRestBtn").textContent = isRestDay(dateStr) ? "☀️ Remove Rest Day" : "💤 Rest Day";
     var host = document.getElementById("dayList");
     var entries = state.schedule.filter(function(s){ return s.date === dateStr; });
@@ -2354,8 +2663,24 @@
   document.getElementById("dayAddScheduleBtn").addEventListener("click", function(){
     openScheduleAdd(null, activeDayStr);
   });
+  function syncDayWeightUI(){
+    var wInput = document.getElementById("dayWeight");
+    var btn = document.getElementById("dayWeightSaveBtn");
+    var locked = dayWeight(activeDayStr) !== null;
+    wInput.readOnly = locked;
+    btn.textContent = locked ? "✎ Edit" : "Save";
+  }
   document.getElementById("dayWeightSaveBtn").addEventListener("click", function(){
-    var v = document.getElementById("dayWeight").value;
+    var wInput = document.getElementById("dayWeight");
+    if (wInput.readOnly){
+      // Recorded value is fixed — unlock it for editing
+      wInput.readOnly = false;
+      wInput.focus();
+      wInput.select();
+      document.getElementById("dayWeightSaveBtn").textContent = "Save";
+      return;
+    }
+    var v = wInput.value;
     if (v === "" || v === null){
       delete state.weights[activeDayStr];
     } else {
@@ -2365,6 +2690,7 @@
     }
     saveState();
     showToast("Weight saved");
+    syncDayWeightUI();
     render();
   });
   document.getElementById("dayRestBtn").addEventListener("click", function(){
@@ -2830,7 +3156,7 @@
   document.getElementById("addCatBtn").addEventListener("click", openCategoryAdd);
 
   // ==================== SETTINGS / BACKUP FOLDER / INSTALL ====================
-  var APP_VERSION = "v4.0 — Advanced timers · Locked history · Update App";
+  var APP_VERSION = "v5.0 — Weight lock · Plan history · Rest times in brief";
   var backupDirHandle = null;
   var backupDirStatus = "boot"; // unsupported | unset | prompt | granted | denied
   var deferredInstallPrompt = null;
@@ -3255,6 +3581,13 @@
     parsed.schedule.forEach(function(sch){ if (!sch.id) sch.id = uid(); });
     if (!parsed.weights || typeof parsed.weights !== "object") parsed.weights = {};
     if (!Array.isArray(parsed.restDays)) parsed.restDays = [];
+    if (!Array.isArray(parsed.workouts)) parsed.workouts = [];
+    parsed.workouts.forEach(function(w){
+      if (!w.id) w.id = uid();
+      if (!Array.isArray(w.exercises)) w.exercises = [];
+      w.exercises.forEach(function(a){ if (!Array.isArray(a.sets)) a.sets = []; });
+      if (!Array.isArray(w.exGaps)) w.exGaps = [];
+    });
     pendingImportPayload = parsed;
     document.getElementById("importFileName").textContent = fileName;
     openOverlay("importOverlay");
@@ -3266,26 +3599,6 @@
     reader.onload = function(){
       try {
         handleImportObject(JSON.parse(reader.result), file.name);
-        parsed.categories.forEach(function(c){
-          if (!c.id) c.id = uid();
-          if (!Array.isArray(c.exercises)) c.exercises = [];
-          c.exercises.forEach(function(e){
-            if (!e.id) e.id = uid();
-            if (!Array.isArray(e.purposes)) e.purposes = [];
-            if (!Array.isArray(e.logs)) e.logs = [];
-            e.muscle = normalizeMuscles(e.muscle);
-            e.logs.forEach(function(l){ if (!l.id) l.id = uid(); if (!Array.isArray(l.sets)) l.sets = []; });
-          });
-        });
-        if (!Array.isArray(parsed.plans)) parsed.plans = [];
-        parsed.plans.forEach(function(p){
-          if (!p.id) p.id = uid();
-          if (!Array.isArray(p.items)) p.items = [];
-        });
-        if (!Array.isArray(parsed.schedule)) parsed.schedule = [];
-        parsed.schedule.forEach(function(s){ if (!s.id) s.id = uid(); });
-        if (!parsed.weights || typeof parsed.weights !== "object") parsed.weights = {};
-        if (!Array.isArray(parsed.restDays)) parsed.restDays = [];
       } catch(e){
         showToast("That file doesn't look like a valid Iron Log backup.");
       }
@@ -3333,6 +3646,11 @@
       state.restDays = state.restDays || [];
       (pendingImportPayload.restDays || []).forEach(function(d){
         if (state.restDays.indexOf(d) === -1) state.restDays.push(d);
+      });
+      state.workouts = state.workouts || [];
+      (pendingImportPayload.workouts || []).forEach(function(incoming){
+        var idx = state.workouts.findIndex(function(w){ return w.id === incoming.id; });
+        if (idx === -1) state.workouts.push(incoming); else state.workouts[idx] = incoming;
       });
     }
     activeCatId = state.categories.length ? state.categories[0].id : null;
