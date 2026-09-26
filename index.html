@@ -1049,7 +1049,7 @@
       <div class="field" style="margin-bottom:10px;">
         <label for="advRestExSec">Rest between exercises (seconds)</label>
         <input id="advRestExSec" type="number" min="0" max="1800" step="5" value="90">
-        <div class="hint">Counts up too. 0 = jump straight to the next exercise.</div>
+        <div class="hint">Logged in the brief — Next exercise never waits, set 1 starts at once.</div>
       </div>
       <div class="field">
         <label>Sets planned per exercise (you can do more or fewer)</label>
@@ -1092,7 +1092,6 @@
       </div>
       <div class="adv-btn-grid">
         <button type="button" class="btn" id="advNextExBtn">Next exercise →</button>
-        <button type="button" class="btn primary" id="advSkipExRestBtn" style="display:none;">Skip rest &amp; start</button>
         <button type="button" class="btn danger-outline" id="advFinishBtn">■ Finish workout</button>
       </div>
 
@@ -2009,7 +2008,6 @@
       restStart: null,
       restSaved: true,
       restTargetNotified: false,
-      exRest: null, // { toIdx, start, total, elapsed, notified } — rest phase between exercises
       exGaps: [],
       finished: false,
       exercises: resolved.map(function(r){
@@ -2060,7 +2058,7 @@
     adv.exercises.forEach(function(a){ a.sets = []; a.exStart = null; a.exEnd = null; a.exSeconds = 0; });
     adv.exercises[0].exStart = Date.now();
     adv.setRunning = false; adv.resting = false; adv.setSeconds = 0;
-    adv.restStart = null; adv.restSaved = true; adv.restTargetNotified = false; adv.restElapsed = 0; adv.exRest = null; adv.exGaps = [];
+    adv.restStart = null; adv.restSaved = true; adv.restTargetNotified = false; adv.restElapsed = 0; adv.exGaps = [];
     document.querySelector("#advRestBox .lbl").textContent = "Rest · " + advFmt(adv.restSec);
     // Prefill first set value/unit from last log for convenience
     var first = previousSetRows(adv.exercises[0].ex)[0] || { weight: "", unit: "KG" };
@@ -2089,14 +2087,6 @@
         renderAdvLive();
       }
     }
-    if (adv.exRest){
-      adv.exRest.elapsed = Math.max(0, Math.floor((now - adv.exRest.start) / 1000));
-      if (adv.exRest.elapsed >= adv.exRest.total && !adv.exRest.notified){
-        adv.exRest.notified = true;
-        showToast("Rest target reached (" + advFmt(adv.exRest.total) + ") — start " + adv.exercises[adv.exRest.toIdx].name);
-        renderAdvLive();
-      }
-    }
     var tEl = document.getElementById("advTotalTimer");
     if (tEl) tEl.textContent = advFmt((now - adv.startStamp) / 1000);
     var eEl = document.getElementById("advExTimer");
@@ -2104,14 +2094,12 @@
     var sEl = document.getElementById("advSetTimer");
     if (sEl) sEl.textContent = adv.setRunning ? advFmt(adv.setSeconds) : "00:00";
     var rEl = document.getElementById("advRestTimer");
-    if (rEl) rEl.textContent = adv.exRest ? advFmt(adv.exRest.elapsed) : (adv.resting ? advFmt(adv.restElapsed) : "--:--");
+    if (rEl) rEl.textContent = adv.resting ? advFmt(adv.restElapsed) : "--:--";
     var nsBtn = document.getElementById("advNextSetBtn");
     if (nsBtn && nsBtn.style.display !== "none" && adv.resting) nsBtn.textContent = "➕ Start another set — rested " + advFmt(adv.restElapsed);
-    var sxBtn = document.getElementById("advSkipExRestBtn");
-    if (sxBtn && sxBtn.style.display !== "none" && adv.exRest) sxBtn.textContent = "Skip rest & start — rested " + advFmt(adv.exRest.elapsed) + " / " + advFmt(adv.exRest.total);
     document.getElementById("advExBox").classList.toggle("active", !!cur && !cur.exEnd);
     document.getElementById("advSetBox").classList.toggle("active", adv.setRunning);
-    document.getElementById("advRestBox").classList.toggle("rest-active", adv.resting || !!adv.exRest);
+    document.getElementById("advRestBox").classList.toggle("rest-active", adv.resting);
     document.getElementById("advStartTimeLine").textContent =
       "Started " + advClock(adv.startStamp) + " · " + adv.date;
   }
@@ -2120,27 +2108,6 @@
     if (!adv) return;
     advTick();
     var total = adv.exercises.length;
-    if (adv.exRest){
-      // Between-exercises rest phase — next exercise hasn't started its clock yet
-      var nxt = adv.exercises[adv.exRest.toIdx];
-      document.getElementById("advExPos").textContent =
-        "Rest before exercise " + (adv.exRest.toIdx + 1) + " of " + total;
-      document.getElementById("advExName").textContent = "💤 " + nxt.name;
-      document.getElementById("advTags").innerHTML =
-        muscleTagsHtml(nxt.ex) + '<span class="tag method">' + esc(nxt.ex.methodology) + "</span>" +
-        (nxt.ex.purposes || []).map(function(p){ return '<span class="tag">' + esc(p) + "</span>"; }).join("");
-      var vb2 = document.getElementById("advVideoBtn");
-      if (nxt.ex.video){ vb2.href = nxt.ex.video; vb2.style.display = "flex"; } else { vb2.style.display = "none"; }
-      document.getElementById("advStartSetBtn").style.display = "none";
-      document.getElementById("advFinishSetBtn").style.display = "none";
-      document.getElementById("advNextSetBtn").style.display = "none";
-      document.getElementById("advSkipExRestBtn").style.display = "";
-      document.getElementById("advSkipExRestBtn").textContent = "Skip rest & start — rested " + advFmt(adv.exRest.elapsed || 0) + " / " + advFmt(adv.exRest.total);
-      document.getElementById("advNextExBtn").style.display = "none";
-      document.querySelector("#advRestBox .lbl").textContent = "Rest · " + advFmt(adv.exRest.total);
-      renderAdvProgressList();
-      return;
-    }
     var cur = adv.exercises[adv.exIndex];
     document.getElementById("advExPos").textContent =
       "Exercise " + (adv.exIndex + 1) + " of " + total + " · Set " + (cur.sets.length + (adv.setRunning ? 1 : 1)) + " of " + cur.plannedSets + " planned";
@@ -2154,8 +2121,6 @@
     document.getElementById("advFinishSetBtn").style.display = adv.setRunning ? "" : "none";
     document.getElementById("advNextSetBtn").style.display = (!adv.setRunning && cur.sets.length > 0) ? "" : "none";
     document.getElementById("advNextSetBtn").textContent = "➕ Start another set (" + cur.sets.length + " done)";
-    document.getElementById("advSkipExRestBtn").style.display = "none";
-    document.querySelector("#advRestBox .lbl").textContent = "Rest · " + advFmt(adv.restSec);
     var isLast = adv.exIndex === total - 1;
     document.getElementById("advNextExBtn").style.display = "";
     document.getElementById("advNextExBtn").textContent = isLast ? "Next exercise → (none left)" : "Next exercise → (" + adv.exercises[adv.exIndex + 1].name + ")";
@@ -2169,17 +2134,16 @@
     host.innerHTML = "";
     adv.exercises.forEach(function(a, i){
       var row = document.createElement("div");
-      var restingHere = adv.exRest && adv.exRest.toIdx === i;
-      row.className = "adv-live-row" + (i === adv.exIndex && !adv.exRest ? " current" : "") + (a.exEnd ? " done" : "") + (restingHere ? " current" : "");
+      row.className = "adv-live-row" + (i === adv.exIndex ? " current" : "") + (a.exEnd ? " done" : "");
       var status = a.exEnd ? "✔ " + advFmt(a.exSeconds) + " · " + a.sets.length + " sets"
-        : (restingHere ? "💤 resting" : (i === adv.exIndex && !adv.exRest ? advFmt(a.exSeconds) + " · " + a.sets.length + " sets" : a.sets.length + " sets"));
+        : (i === adv.exIndex ? advFmt(a.exSeconds) + " · " + a.sets.length + " sets" : a.sets.length + " sets");
       row.innerHTML = "<span>" + (i + 1) + ". " + esc(a.name) + "</span><span class='st'>" + esc(status) + "</span>";
       host.appendChild(row);
     });
   }
 
   document.getElementById("advStartSetBtn").addEventListener("click", function(){
-    if (!adv || adv.setRunning || adv.resting || adv.exRest) return;
+    if (!adv || adv.setRunning || adv.resting) return;
     adv.setRunning = true;
     adv.setStart = Date.now();
     adv.setSeconds = 0;
@@ -2214,7 +2178,7 @@
   // "Start another set" = stop the rest clock (taken time is stored) and
   // start the next set timer immediately — no extra Start press needed.
   document.getElementById("advNextSetBtn").addEventListener("click", function(){
-    if (!adv || adv.setRunning || adv.exRest) return;
+    if (!adv || adv.setRunning) return;
     advRecordSetRest(Date.now());
     adv.resting = false;
     adv.restStart = null;
@@ -2229,7 +2193,6 @@
   // Reset: clears current set timer + rest timer (keeps logged sets & exercise clock)
   document.getElementById("advResetBtn").addEventListener("click", function(){
     if (!adv) return;
-    if (adv.exRest){ advCompleteExRest(Date.now()); return; }
     advRecordSetRest(Date.now());
     adv.setRunning = false;
     adv.setStart = null;
@@ -2242,7 +2205,7 @@
   });
 
   document.getElementById("advNextExBtn").addEventListener("click", function(){
-    if (!adv || adv.exRest) return;
+    if (!adv) return;
     if (adv.exIndex >= adv.exercises.length - 1) return;
     advAdvanceExercise();
   });
@@ -2271,15 +2234,8 @@
     cur.exEnd = Date.now();
     cur.exSeconds = (cur.exEnd - cur.exStart) / 1000;
     var toIdx = adv.exIndex + 1;
-    if (adv.restExSec > 0){
-      // Timed rest between exercises before the next clock starts (counts up)
-      adv.exRest = { toIdx: toIdx, start: Date.now(), total: adv.restExSec, elapsed: 0, notified: false };
-      showToast("Rest up to " + advFmt(adv.restExSec) + " before " + adv.exercises[toIdx].name);
-      renderAdvLive();
-    } else {
-      adv.exGaps[toIdx] = 0;
-      advStartNextExercise(toIdx);
-    }
+    adv.exGaps[toIdx] = 0;
+    advStartNextExercise(toIdx);
   }
 
   function advStartNextExercise(toIdx){
@@ -2289,23 +2245,13 @@
     nxt.exSeconds = 0;
     var pre = previousSetRows(nxt.ex)[0] || { weight: "", unit: "KG" };
     advPrefillSetInputs(pre);
-    showToast("Next: " + nxt.name);
+    // 1st set of the next exercise begins immediately — no extra tap
+    adv.setRunning = true;
+    adv.setStart = Date.now();
+    adv.setSeconds = 0;
+    showToast("Next: " + nxt.name + " — set 1 started!");
     renderAdvLive();
   }
-
-  // Rest counts up — completing stores however long was actually rested.
-  function advCompleteExRest(now){
-    if (!adv || !adv.exRest) return;
-    var gap = Math.max(0, Math.round((now - adv.exRest.start) / 1000));
-    var toIdx = adv.exRest.toIdx;
-    adv.exGaps[toIdx] = gap;
-    adv.exRest = null;
-    advStartNextExercise(toIdx);
-  }
-  document.getElementById("advSkipExRestBtn").addEventListener("click", function(){
-    if (!adv || !adv.exRest) return;
-    advCompleteExRest(Date.now());
-  });
 
   document.getElementById("advFinishBtn").addEventListener("click", function(){
     if (!adv) return;
@@ -2315,11 +2261,6 @@
 
   function advFinishWorkout(){
     var now = Date.now();
-    if (adv.exRest){
-      // Finished during the between-exercises rest — next exercise stays skipped
-      adv.exGaps[adv.exRest.toIdx] = Math.max(0, Math.round((now - adv.exRest.start) / 1000));
-      adv.exRest = null;
-    }
     var cur = adv.exercises[adv.exIndex];
     advCloseRunningSet();
     advRecordSetRest(now);
@@ -3213,8 +3154,8 @@
   document.getElementById("addCatBtn").addEventListener("click", openCategoryAdd);
 
   // ==================== SETTINGS / BACKUP FOLDER / INSTALL ====================
-  var APP_VERSION = "v8.0 — Reliable updater + auto backup";
-  var SW_VERSION = 8; // number in dist/sw.js VERSION (iron-log-vN) — keep in sync
+  var APP_VERSION = "v9.0 — Next exercise starts set 1 at once";
+  var SW_VERSION = 9; // number in dist/sw.js VERSION (iron-log-vN) — keep in sync
   var backupDirHandle = null;
   var backupDirStatus = "boot"; // unsupported | unset | prompt | granted | denied
   var deferredInstallPrompt = null;
