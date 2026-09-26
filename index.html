@@ -743,7 +743,8 @@
   .adv-ex-name { font-family: 'Oswald', system-ui, sans-serif; font-size: 21px; text-transform: uppercase; margin-bottom: 8px; }
   .adv-set-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
   .adv-btn-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-  .adv-btn-grid .btn { flex: 1; justify-content: center; min-width: 140px; }
+  .adv-btn-grid .btn { flex: 1 1 0; justify-content: center; min-width: 0; white-space: normal; text-align: center; line-height: 1.35; overflow-wrap: anywhere; }
+  .adv-live-row > span:first-child { min-width: 0; overflow-wrap: anywhere; }
   .adv-live-list { margin-top: 14px; }
   .adv-live-row {
     display: flex; align-items: center; gap: 8px;
@@ -2149,7 +2150,7 @@
       (cur.ex.purposes || []).map(function(p){ return '<span class="tag">' + esc(p) + "</span>"; }).join("");
     var vb = document.getElementById("advVideoBtn");
     if (cur.ex.video){ vb.href = cur.ex.video; vb.style.display = "flex"; } else { vb.style.display = "none"; }
-    document.getElementById("advStartSetBtn").style.display = (!adv.setRunning && !adv.resting) ? "" : "none";
+    document.getElementById("advStartSetBtn").style.display = (!adv.setRunning && !adv.resting && cur.sets.length === 0) ? "" : "none";
     document.getElementById("advFinishSetBtn").style.display = adv.setRunning ? "" : "none";
     document.getElementById("advNextSetBtn").style.display = (!adv.setRunning && cur.sets.length > 0) ? "" : "none";
     document.getElementById("advNextSetBtn").textContent = "➕ Start another set (" + cur.sets.length + " done)";
@@ -2210,16 +2211,19 @@
     renderAdvLive();
   });
 
-  // "Start another set" = stop the rest clock (taken time is stored) and arm Start set
+  // "Start another set" = stop the rest clock (taken time is stored) and
+  // start the next set timer immediately — no extra Start press needed.
   document.getElementById("advNextSetBtn").addEventListener("click", function(){
     if (!adv || adv.setRunning || adv.exRest) return;
     advRecordSetRest(Date.now());
     adv.resting = false;
     adv.restStart = null;
     adv.restElapsed = 0;
+    adv.setRunning = true;
+    adv.setStart = Date.now();
+    adv.setSeconds = 0;
+    showToast("Set " + (adv.exercises[adv.exIndex].sets.length + 1) + " started — go!");
     renderAdvLive();
-    // Focus the Start set button flow: user presses Start set next
-    showToast("Ready — press Start set");
   });
 
   // Reset: clears current set timer + rest timer (keeps logged sets & exercise clock)
@@ -3209,11 +3213,12 @@
   document.getElementById("addCatBtn").addEventListener("click", openCategoryAdd);
 
   // ==================== SETTINGS / BACKUP FOLDER / INSTALL ====================
-  var APP_VERSION = "v6.0 — Count-up rest · Sets as KG/MIN values";
+  var APP_VERSION = "v8.0 — Reliable updater + auto backup";
+  var SW_VERSION = 8; // number in dist/sw.js VERSION (iron-log-vN) — keep in sync
   var backupDirHandle = null;
   var backupDirStatus = "boot"; // unsupported | unset | prompt | granted | denied
   var deferredInstallPrompt = null;
-  var appUpdateState = { checking: false, ready: false, reg: null };
+  var appUpdateState = { checking: false, available: false, deployedVer: null };
 
   function setUpdateStatus(msg){
     var el = document.getElementById("appUpdateStatus");
@@ -3223,74 +3228,93 @@
     var pill = document.getElementById("appVersionPill");
     if (pill) pill.textContent = "Version: " + APP_VERSION;
     var applyBtn = document.getElementById("applyUpdateBtn");
-    if (applyBtn) applyBtn.style.display = (appUpdateState.ready && appUpdateState.reg && appUpdateState.reg.waiting) ? "" : "none";
+    if (applyBtn) applyBtn.style.display = appUpdateState.available ? "" : "none";
     var checkBtn = document.getElementById("checkUpdateBtn");
     if (checkBtn) checkBtn.disabled = !!appUpdateState.checking;
   }
+  function parseSwVersion(text){
+    var m = /iron-log-v(\d+)/.exec(text || "");
+    return m ? parseInt(m[1], 10) : null;
+  }
+  // The app works fully offline. Updating needs internet: we fetch the
+  // deployed sw.js (cache-bypassed) and compare its version with this page.
   function checkForAppUpdate(){
-    if (!("serviceWorker" in navigator)){
-      setUpdateStatus("Updates run through the installed app. This browser has no service worker support.");
-      return;
-    }
     appUpdateState.checking = true;
+    appUpdateState.available = false;
     refreshUpdateCard();
-    setUpdateStatus("Checking for updates…");
-    navigator.serviceWorker.getRegistration().then(function(reg){
-      if (!reg){
-        appUpdateState.checking = false;
-        refreshUpdateCard();
-        setUpdateStatus("App is not installed with a service worker here — open the installed app (or the dist build over https/localhost) to update.");
-        return;
-      }
-      appUpdateState.reg = reg;
-      if (reg.waiting){
-        appUpdateState.checking = false;
-        appUpdateState.ready = true;
-        refreshUpdateCard();
-        setUpdateStatus("Update ready — tap Restart to apply it.");
-        return;
-      }
-      function onFound(){
-        var sw = reg.installing;
-        setUpdateStatus("Downloading update…");
-        if (sw) sw.addEventListener("statechange", function(){
-          if (sw.state === "installed" && navigator.serviceWorker.controller){
-            appUpdateState.checking = false;
-            appUpdateState.ready = true;
-            appUpdateState.reg = reg;
-            refreshUpdateCard();
-            setUpdateStatus("Update ready — tap Restart to apply it.");
-          }
-        });
-      }
-      reg.addEventListener("updatefound", onFound);
-      reg.update().then(function(){
-        window.setTimeout(function(){
-          if (!appUpdateState.ready){
-            appUpdateState.checking = false;
-            refreshUpdateCard();
-            setUpdateStatus("You're on the latest version.");
-          }
-        }, 2500);
-      }).catch(function(){
-        appUpdateState.checking = false;
-        refreshUpdateCard();
-        setUpdateStatus("Couldn't check — are you offline?");
-      });
-    }).catch(function(){
+    setUpdateStatus("Checking for updates… (needs internet)");
+    var done = false;
+    function finish(msg){
+      if (done) return;
+      done = true;
       appUpdateState.checking = false;
       refreshUpdateCard();
-      setUpdateStatus("Couldn't check — are you offline?");
+      setUpdateStatus(msg);
+    }
+    if (typeof fetch === "undefined"){ finish("This browser can't check — but the app itself works offline. Use Save backup to protect your data."); return; }
+    // Nudge the service worker too (best effort; ignored on file://)
+    try {
+      if ("serviceWorker" in navigator && navigator.serviceWorker.getRegistration){
+        navigator.serviceWorker.getRegistration().then(function(reg){
+          if (reg && reg.update) reg.update().catch(function(){});
+        }).catch(function(){});
+      }
+    } catch(e){}
+    var timer = setTimeout(function(){
+      finish("Couldn't reach the server — offline? The app itself works offline; updating needs internet.");
+    }, 12000);
+    fetch("./sw.js", { cache: "no-store" }).then(function(res){
+      if (!res.ok) throw new Error("http " + res.status);
+      return res.text();
+    }).then(function(text){
+      clearTimeout(timer);
+      var v = parseSwVersion(text);
+      if (v === null){ finish("Reached the server but couldn't read its version. Your data is safe on this device."); return; }
+      appUpdateState.deployedVer = v;
+      if (v > SW_VERSION){
+        appUpdateState.available = true;
+        finish("Update found: v" + v + " (you have v" + SW_VERSION + ") — tap Save backup & restart.");
+      } else {
+        finish("You're on the latest version (v" + SW_VERSION + "). The app works offline.");
+      }
+    }).catch(function(){
+      clearTimeout(timer);
+      finish("Couldn't reach the server — offline, or this file wasn't opened from the installed/hosted app. The app itself works offline; updating needs internet. Use Save backup to protect your data.");
     });
   }
-  function applyAppUpdate(){
-    var reg = appUpdateState.reg;
-    if (reg && reg.waiting){
-      setUpdateStatus("Applying update…");
-      reg.waiting.postMessage("SKIP_WAITING");
-      return;
+  // Saves a JSON backup of app data first, then updates by dropping the old
+  // offline shell (unregister) and reloading fresh from the server.
+  function downloadJsonBackup(filename){
+    try {
+      var blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 800);
+      return true;
+    } catch(e){
+      showToast("Backup failed in this browser.");
+      return false;
     }
-    window.location.reload();
+  }
+  function applyAppUpdate(){
+    downloadJsonBackup("iron-log-pre-update-" + todayStr() + ".json");
+    showToast("Backup saved — updating app…");
+    setUpdateStatus("Backup saved — updating to v" + (appUpdateState.deployedVer || "?") + ", restarting…");
+    function hardReload(){ window.location.reload(); }
+    try {
+      if ("serviceWorker" in navigator && navigator.serviceWorker.getRegistration){
+        navigator.serviceWorker.getRegistration().then(function(reg){
+          if (reg && reg.unregister){
+            reg.unregister().then(hardReload).catch(hardReload);
+            setTimeout(hardReload, 3000); // safety net
+          } else { hardReload(); }
+        }).catch(hardReload);
+      } else { setTimeout(hardReload, 900); }
+    } catch(e){ setTimeout(hardReload, 900); }
   }
   if ("serviceWorker" in navigator){
     navigator.serviceWorker.addEventListener("controllerchange", function(){
@@ -3472,16 +3496,18 @@
     var up = document.createElement("div");
     up.className = "set-card";
     up.innerHTML = "<h3>Update app</h3>" +
-      "<div class='d'>After an update (like this one), tap Check for updates, then Restart to load the newest version. Your logged data stays on this device.</div>" +
+      "<div class='d'>The app works fully offline. Updating needs internet: check for a new version, then restart — a JSON backup of your data is saved automatically first.</div>" +
       "<div class='set-rowline'><span class='folder-pill' id='appVersionPill'>Version: " + esc(APP_VERSION) + "</span></div>" +
       "<div class='set-rowline' style='margin-top:8px;'>" +
         "<button class='btn primary' id='checkUpdateBtn'>Check for updates</button>" +
-        "<button class='btn' id='applyUpdateBtn' style='display:none;'>Restart to apply</button>" +
+        "<button class='btn primary' id='applyUpdateBtn' style='display:none;'>Save backup &amp; restart</button>" +
+        "<button class='btn' id='backupNowBtn'>Save backup</button>" +
       "</div>" +
       "<div class='d' id='appUpdateStatus' style='margin-top:8px;'>Idle.</div>";
     wrap.appendChild(up);
     up.querySelector("#checkUpdateBtn").addEventListener("click", checkForAppUpdate);
     up.querySelector("#applyUpdateBtn").addEventListener("click", applyAppUpdate);
+    up.querySelector("#backupNowBtn").addEventListener("click", exportBackup);
     refreshUpdateCard();
 
     var bc = document.createElement("div");
