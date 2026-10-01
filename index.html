@@ -13,6 +13,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+
 <title>Iron Log — Workout Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -542,6 +543,117 @@
   .backup-row .bn { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .backup-row .bd { font-size: 11px; color: var(--text-dim); flex: none; }
 
+  /* ---------- Body tab ---------- */
+  .body-layout {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 14px;
+    margin-top: 12px;
+    align-items: start;
+  }
+  @media (max-width: 860px) {
+    .body-layout { grid-template-columns: 1fr; }
+  }
+  .bd-viewbar { display: flex; gap: 6px; margin-bottom: 10px; }
+  .bd-viewbar .chip { flex: 1; padding: 7px 10px; font-size: 12.5px; }
+  .bd-figure-wrap { border: 1px solid var(--border); background: var(--surface); border-radius: 12px; padding: 12px; box-shadow: var(--shadow); }
+  .bd-figure { display: block; width: 100%; height: auto; max-height: 62vh; margin: 0 auto; }
+  .bd-body { fill: var(--surface-2); stroke: var(--border); stroke-width: 1.4; }
+  .bd-muscle { fill: var(--border); stroke: var(--surface); stroke-width: 1.1; cursor: pointer; transition: fill .15s ease; }
+  .bd-muscle:hover { fill: var(--text-dim); }
+  .bd-muscle.rated { fill: var(--accent); }
+  .bd-muscle.hi { fill: var(--good); stroke: var(--good); }
+  .bd-muscle.sel { stroke: var(--text); stroke-width: 2.4; }
+  .bd-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11.5px; color: var(--text-dim); margin-top: 10px; }
+  .bd-legend b { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .bd-legend .k-unrated { background: var(--border); }
+  .bd-legend .k-rated { background: var(--accent); }
+  .bd-legend .k-hi { background: var(--good); }
+  .bd-legend .k-sel { background: var(--surface-2); box-shadow: inset 0 0 0 2px var(--text); }
+
+  .bd-stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+  .bd-stat { border: 1px solid var(--border); background: var(--surface-2); border-radius: 10px; padding: 9px 11px; }
+  .bd-stat .lbl { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); }
+  .bd-stat .val { font-family: 'Oswald', system-ui, sans-serif; font-size: 22px; line-height: 1.15; margin-top: 2px; }
+  .bd-stat .val small { font-size: 12px; color: var(--text-dim); font-family: inherit; }
+
+  .bd-meter { margin-bottom: 12px; }
+  .bd-meter .mrow { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
+  .bd-meter .mname { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); }
+  .bd-meter .mval { font-family: 'Oswald', system-ui, sans-serif; font-size: 16px; }
+  input[type=range].bd-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    height: 24px;
+    cursor: pointer;
+  }
+  input[type=range].bd-range::-webkit-slider-runnable-track { height: 6px; border-radius: 4px; background: var(--surface-2); }
+  input[type=range].bd-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    margin-top: -7px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--surface);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+  }
+  input[type=range].bd-range::-moz-range-track { height: 6px; border-radius: 4px; background: var(--surface-2); }
+  input[type=range].bd-range::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 2px solid var(--surface);
+  }
+
+  .bd-swatch {
+    flex: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    line-height: 1;
+  }
+  .bd-swatch.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .bd-swatch.hi { background: var(--good); border-color: var(--good); color: #fff; }
+
+  .bd-list { display: flex; flex-direction: column; gap: 4px; }
+  .bd-list-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 7px 10px;
+    text-align: left;
+    color: var(--text);
+  }
+  .bd-list-row:hover { border-color: var(--accent); }
+  .bd-list-row.sel { border-color: var(--text); background: var(--surface-2); }
+  .bd-list-row .nm { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bd-list-row .rg { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); }
+  .bd-list-row .minibar { flex: none; width: 44px; height: 5px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+  .bd-list-row .minibar > div { height: 100%; background: var(--accent); }
+  .bd-list-row .pct { flex: none; min-width: 30px; text-align: right; font-family: 'Oswald', system-ui, sans-serif; font-size: 15px; }
+
+  .bd-posture-row { display: flex; gap: 10px; align-items: center; border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; }
+  .bd-posture-row.on { border-color: var(--accent); }
+  .bd-posture-row .pn { flex: 1; min-width: 118px; font-size: 13px; font-weight: 600; }
+  .bd-posture-row .pctv { flex: none; min-width: 42px; text-align: right; font-family: 'Oswald', system-ui, sans-serif; font-size: 16px; }
+
   .empty {
     padding: 60px 20px;
     text-align: center;
@@ -792,6 +904,7 @@
       <button data-tab="library" class="active">📚 Library</button>
       <button data-tab="plans">📋 Plans</button>
       <button data-tab="calendar">🗓 Calendar</button>
+      <button data-tab="body">🦵 Body</button>
       <button data-tab="settings">⚙️ Settings</button>
     </nav>
 
@@ -1255,8 +1368,21 @@
       schedule: [],
       weights: {},
       restDays: [],
-      workouts: []
+      workouts: [],
+      body: { muscles: {}, posture: { status: "", problems: [] } }
     };
+  }
+
+  function normalizeBody(b){
+    if (!b || typeof b !== "object") return { muscles:{}, posture:{ status:"", problems:[] } };
+    if (!b.muscles || typeof b.muscles !== "object") b.muscles = {};
+    if (!b.posture || typeof b.posture !== "object") b.posture = {};
+    if (typeof b.posture.status !== "string") b.posture.status = "";
+    if (!Array.isArray(b.posture.problems)) b.posture.problems = [];
+    b.posture.problems = b.posture.problems.filter(function(p){ return p && p.id; }).map(function(p){
+      return { id: p.id, name: String(p.name || p.id), percent: clampPct(p.percent), note: String(p.note || "") };
+    });
+    return b;
   }
 
   function loadState(){
@@ -1270,6 +1396,7 @@
       if (!parsed.weights || typeof parsed.weights !== "object") parsed.weights = {};
       if (!Array.isArray(parsed.restDays)) parsed.restDays = [];
       if (!Array.isArray(parsed.workouts)) parsed.workouts = [];
+      parsed.body = normalizeBody(parsed.body);
       parsed.categories.forEach(function(c){
         (c.exercises||[]).forEach(function(e){ e.muscle = normalizeMuscles(e.muscle); });
       });
@@ -1537,6 +1664,7 @@
     if (mainTab === "library"){ renderTabs(); renderLibrary(); }
     else if (mainTab === "plans"){ renderPlans(); }
     else if (mainTab === "calendar"){ renderCalendar(); }
+    else if (mainTab === "body"){ renderBody(); }
     else if (mainTab === "settings"){ renderSettings(); }
   }
 
@@ -3414,6 +3542,569 @@
     if (mainTab === "settings") renderSettings();
   });
 
+  // ==================== BODY ====================
+  // Manual muscle ratings + posture status. Everything lives in state.body so
+  // it rides along with the normal JSON export/import.
+
+  var BODY_MUSCLES = [
+    { id:"pecs",        name:"Chest",          region:"Chest" },
+    { id:"front-delts", name:"Front Delts",    region:"Shoulders" },
+    { id:"side-delts",  name:"Side Delts",     region:"Shoulders" },
+    { id:"rear-delts",  name:"Rear Delts",     region:"Shoulders" },
+    { id:"traps-upper", name:"Upper Traps",    region:"Back" },
+    { id:"traps-mid",   name:"Mid Traps",      region:"Back" },
+    { id:"traps-lower", name:"Lower Traps",    region:"Back" },
+    { id:"rhomboids",   name:"Rhomboids",      region:"Back" },
+    { id:"lats",        name:"Lats",           region:"Back" },
+    { id:"teres-major", name:"Teres Major",    region:"Back" },
+    { id:"erectors",    name:"Erector Spinae", region:"Back" },
+    { id:"biceps",      name:"Biceps",         region:"Arms" },
+    { id:"triceps",     name:"Triceps",        region:"Arms" },
+    { id:"forearms",    name:"Forearms",       region:"Arms" },
+    { id:"abs",         name:"Abs",            region:"Core" },
+    { id:"obliques",    name:"Obliques",       region:"Core" },
+    { id:"serratus",    name:"Serratus",       region:"Core" },
+    { id:"adductors",   name:"Adductors",      region:"Legs" },
+    { id:"glutes",      name:"Glutes",         region:"Glutes" },
+    { id:"hamstrings",  name:"Hamstrings",     region:"Legs" },
+    { id:"quads",       name:"Quads",          region:"Legs" },
+    { id:"calves",      name:"Calves",         region:"Calves" },
+    { id:"tibialis",    name:"Tibialis",       region:"Calves" }
+  ];
+
+  var POSTURE_PROBLEMS = [
+    "Forward Head", "Rounded Shoulders", "Kyphosis", "Lordosis", "Sway Back",
+    "Anterior Pelvic Tilt", "Flat Back", "Uneven Shoulders",
+    "Scapular Dyskinesis", "Neck Hyperlordosis", "Slouching", "Weak Core"
+  ];
+
+  var bodyView = "front";      // front | side | back
+  var bodyMuscleId = null;     // selected muscle
+  var bodyFilter = "off";      // off | rated | highlight
+  var bodySearch = "";
+
+  function clampPct(v){
+    var n = Math.round(parseFloat(v) || 0);
+    if (n < 0) n = 0;
+    if (n > 100) n = 100;
+    return n;
+  }
+  function bodyMuscleById(id){
+    for (var i = 0; i < BODY_MUSCLES.length; i++) if (BODY_MUSCLES[i].id === id) return BODY_MUSCLES[i];
+    return null;
+  }
+  function bodyStore(){
+    // Assign back, so a backup saved before this feature still gets a usable
+    // store instead of every edit landing on a throwaway object.
+    state.body = normalizeBody(state.body);
+    return state.body;
+  }
+  function bodyMuscle(id){
+    var s = bodyStore();
+    if (!s.muscles[id]) s.muscles[id] = { rate:0, efficiency:0, shape:0, highlight:false, note:"" };
+    var r = s.muscles[id];
+    r.rate = clampPct(r.rate);
+    r.efficiency = clampPct(r.efficiency);
+    r.shape = clampPct(r.shape);
+    r.highlight = !!r.highlight;
+    if (typeof r.note !== "string") r.note = "";
+    return r;
+  }
+  function bodyAllRecords(){
+    return BODY_MUSCLES.map(function(d){ return { def:d, rec:bodyMuscle(d.id) }; });
+  }
+  function bodyPostureId(name){ return "p-" + String(name).toLowerCase().replace(/[^a-z0-9]+/g,"-"); }
+  function bodyProblem(name){
+    var s = bodyStore();
+    var id = bodyPostureId(name);
+    var found = null;
+    for (var i = 0; i < s.posture.problems.length; i++){
+      if (s.posture.problems[i] && s.posture.problems[i].id === id){ found = s.posture.problems[i]; break; }
+    }
+    if (!found){ found = { id:id, name:name, percent:0, note:"" }; s.posture.problems.push(found); }
+    found.name = name;
+    found.percent = clampPct(found.percent);
+    return found;
+  }
+  function bodyPostureStats(){
+    var s = bodyStore();
+    var rows = POSTURE_PROBLEMS.map(function(n){ return bodyProblem(n); });
+    var active = rows.filter(function(p){ return p.percent > 0; });
+    var avg = active.length
+      ? Math.round(active.reduce(function(sum,p){ return sum + p.percent; }, 0) / active.length)
+      : 0;
+    return { active:active, avg:avg, score:Math.max(0, 100 - avg) };
+  }
+  function bodyMuscleStats(){
+    var all = bodyAllRecords();
+    var rated = all.filter(function(x){ return x.rec.rate > 0; });
+    var hi = all.filter(function(x){ return x.rec.highlight; });
+    var avg = rated.length
+      ? Math.round(rated.reduce(function(sum,x){ return sum + x.rec.rate; }, 0) / rated.length)
+      : 0;
+    return { rated:rated.length, total:all.length, hi:hi.length, avg:avg };
+  }
+
+  // ---- figure geometry (stylised mannequin; each muscle is a click group) ----
+  function bdMus(id, inner){
+    // Bake the rating state in, so a fresh render (tab switch, view switch)
+    // always shows the colours - not just after a live sync.
+    var rec = bodyMuscle(id);
+    var cls = "bd-muscle";
+    if (rec.rate > 0) cls += " rated";
+    if (rec.highlight) cls += " hi";
+    if (id === bodyMuscleId) cls += " sel";
+    return '<g class="' + cls + '" data-muscle="' + id + '">' + inner + '</g>';
+  }
+  function bdLimbs(){
+    return '<rect x="40" y="94" width="26" height="112" rx="13"/>' +
+           '<rect x="38" y="204" width="24" height="118" rx="12"/>' +
+           '<ellipse cx="50" cy="332" rx="13" ry="17"/>' +
+           '<rect x="174" y="94" width="26" height="112" rx="13"/>' +
+           '<rect x="178" y="204" width="24" height="118" rx="12"/>' +
+           '<ellipse cx="190" cy="332" rx="13" ry="17"/>' +
+           '<rect x="78" y="196" width="44" height="128" rx="22"/>' +
+           '<rect x="84" y="318" width="34" height="116" rx="17"/>' +
+           '<rect x="78" y="428" width="44" height="20" rx="9"/>' +
+           '<rect x="118" y="196" width="44" height="128" rx="22"/>' +
+           '<rect x="122" y="318" width="34" height="116" rx="17"/>' +
+           '<rect x="118" y="428" width="44" height="20" rx="9"/>';
+  }
+  function bdBaseFront(){
+    return '<g class="bd-body">' +
+      '<ellipse cx="120" cy="40" rx="23" ry="28"/>' +
+      '<rect x="108" y="60" width="24" height="20" rx="6"/>' +
+      '<path d="M120 70C148 72 174 82 184 96L178 150L172 194L176 240L148 254L120 254L92 254L64 240L68 194L62 150L56 96C66 82 92 72 120 70Z"/>' +
+      bdLimbs() + '</g>';
+  }
+  function bdBaseBack(){
+    return '<g class="bd-body">' +
+      '<ellipse cx="120" cy="40" rx="23" ry="28"/>' +
+      '<rect x="108" y="60" width="24" height="20" rx="6"/>' +
+      '<path d="M120 70C150 72 178 84 186 100L180 156C178 178 176 192 176 208L178 246L150 258L120 258L90 258L62 246L64 208C64 192 62 178 60 156L54 100C62 84 90 72 120 70Z"/>' +
+      bdLimbs() + '</g>';
+  }
+  function bdBaseSide(){
+    return '<g class="bd-body">' +
+      '<ellipse cx="72" cy="40" rx="22" ry="27"/>' +
+      '<rect x="62" y="60" width="20" height="18" rx="6"/>' +
+      '<path d="M74 70C90 72 102 82 106 96L108 140C108 160 104 178 102 196L108 234L96 258L72 254L54 246L50 200L48 148L50 98C54 82 60 72 74 70Z"/>' +
+      '<rect x="98" y="100" width="24" height="106" rx="12"/>' +
+      '<rect x="98" y="204" width="21" height="112" rx="10"/>' +
+      '<ellipse cx="108" cy="326" rx="12" ry="15"/>' +
+      '<rect x="52" y="200" width="42" height="122" rx="21"/>' +
+      '<rect x="54" y="318" width="34" height="114" rx="17"/>' +
+      '<rect x="46" y="426" width="50" height="20" rx="9"/>' +
+    '</g>';
+  }
+  function bdMusclesFront(){
+    return bdMus("front-delts",
+        '<ellipse cx="82" cy="106" rx="25" ry="21"/><ellipse cx="158" cy="106" rx="25" ry="21"/>') +
+      bdMus("pecs",
+        '<ellipse cx="101" cy="138" rx="20" ry="16"/><ellipse cx="139" cy="138" rx="20" ry="16"/>') +
+      bdMus("serratus",
+        '<ellipse cx="77" cy="158" rx="10" ry="14"/><ellipse cx="163" cy="158" rx="10" ry="14"/>') +
+      bdMus("abs",
+        '<rect x="102" y="148" width="15" height="15" rx="4"/><rect x="123" y="148" width="15" height="15" rx="4"/>' +
+        '<rect x="102" y="168" width="15" height="15" rx="4"/><rect x="123" y="168" width="15" height="15" rx="4"/>' +
+        '<rect x="102" y="188" width="15" height="15" rx="4"/><rect x="123" y="188" width="15" height="15" rx="4"/>') +
+      bdMus("obliques",
+        '<ellipse cx="86" cy="180" rx="13" ry="26"/><ellipse cx="154" cy="180" rx="13" ry="26"/>') +
+      bdMus("biceps",
+        '<ellipse cx="53" cy="142" rx="13" ry="27"/><ellipse cx="187" cy="142" rx="13" ry="27"/>') +
+      bdMus("triceps",
+        '<ellipse cx="56" cy="112" rx="9" ry="15"/><ellipse cx="184" cy="112" rx="9" ry="15"/>') +
+      bdMus("forearms",
+        '<rect x="40" y="212" width="20" height="104" rx="10"/><rect x="180" y="212" width="20" height="104" rx="10"/>') +
+      bdMus("adductors",
+        '<ellipse cx="101" cy="252" rx="10" ry="22"/><ellipse cx="139" cy="252" rx="10" ry="22"/>') +
+      bdMus("quads",
+        '<rect x="80" y="208" width="40" height="112" rx="20"/><rect x="120" y="208" width="40" height="112" rx="20"/>') +
+      bdMus("tibialis",
+        '<rect x="104" y="324" width="13" height="50" rx="6"/><rect x="123" y="324" width="13" height="50" rx="6"/>') +
+      bdMus("calves",
+        '<ellipse cx="101" cy="396" rx="19" ry="32"/><ellipse cx="139" cy="396" rx="19" ry="32"/>');
+  }
+  function bdMusclesSide(){
+    return bdMus("side-delts", '<ellipse cx="98" cy="110" rx="22" ry="22"/>') +
+      bdMus("traps-upper", '<path d="M60 86C72 80 88 84 98 96L94 110C84 98 72 92 60 94Z"/>') +
+      bdMus("pecs", '<path d="M106 120C96 120 92 132 94 146L106 142Z"/>') +
+      bdMus("lats", '<path d="M56 118C72 116 86 130 92 152L88 182L62 176L54 146Z"/>') +
+      bdMus("triceps", '<rect x="100" y="140" width="20" height="62" rx="10"/>') +
+      bdMus("abs", '<rect x="88" y="158" width="18" height="46" rx="9"/>') +
+      bdMus("erectors", '<rect x="58" y="186" width="15" height="62" rx="7"/>') +
+      bdMus("obliques", '<ellipse cx="92" cy="214" rx="15" ry="22"/>') +
+      bdMus("glutes", '<ellipse cx="66" cy="224" rx="23" ry="26"/>') +
+      bdMus("quads", '<path d="M92 252C100 256 100 288 94 316L84 314L82 254Z"/>') +
+      bdMus("hamstrings", '<path d="M54 252C50 256 50 288 56 314L68 312L68 254Z"/>') +
+      bdMus("tibialis", '<ellipse cx="64" cy="340" rx="12" ry="26"/>') +
+      bdMus("calves", '<ellipse cx="72" cy="392" rx="18" ry="32"/>');
+  }
+  function bdMusclesBack(){
+    return bdMus("traps-upper",
+        '<path d="M120 74L96 82L82 104L92 122L106 104L120 96L134 104L148 122L158 104L144 82Z"/>') +
+      bdMus("traps-mid",
+        '<path d="M90 114L106 100L120 96L134 100L150 114L154 142L133 130L120 126L107 130L86 142Z"/>') +
+      bdMus("traps-lower",
+        '<path d="M88 148L106 132L120 128L134 132L152 148L146 168L133 150L120 143L107 150L94 168Z"/>') +
+      bdMus("rear-delts",
+        '<ellipse cx="82" cy="112" rx="23" ry="20"/><ellipse cx="158" cy="112" rx="23" ry="20"/>') +
+      bdMus("teres-major",
+        '<ellipse cx="101" cy="152" rx="14" ry="12"/><ellipse cx="139" cy="152" rx="14" ry="12"/>') +
+      bdMus("rhomboids",
+        '<path d="M106 132L118 128L118 160L106 168Z"/><path d="M134 132L122 128L122 160L134 168Z"/>') +
+      bdMus("lats",
+        '<path d="M86 138L104 148L110 202L96 240L76 212L78 158Z"/><path d="M154 138L136 148L130 202L144 240L164 212L162 158Z"/>') +
+      bdMus("erectors",
+        '<rect x="106" y="162" width="13" height="80" rx="6"/><rect x="121" y="162" width="13" height="80" rx="6"/>') +
+      bdMus("triceps",
+        '<ellipse cx="56" cy="150" rx="12" ry="26"/><ellipse cx="184" cy="150" rx="12" ry="26"/>') +
+      bdMus("glutes",
+        '<ellipse cx="100" cy="234" rx="23" ry="24"/><ellipse cx="140" cy="234" rx="23" ry="24"/>') +
+      bdMus("hamstrings",
+        '<rect x="80" y="258" width="36" height="62" rx="18"/><rect x="124" y="258" width="36" height="62" rx="18"/>') +
+      bdMus("calves",
+        '<ellipse cx="101" cy="396" rx="19" ry="32"/><ellipse cx="139" cy="396" rx="19" ry="32"/>');
+  }
+
+  function bodyFigureSVG(){
+    var base, mus, vb;
+    if (bodyView === "side"){
+      vb = "0 0 150 470"; base = bdBaseSide(); mus = bdMusclesSide();
+    } else if (bodyView === "back"){
+      vb = "0 0 240 470"; base = bdBaseBack(); mus = bdMusclesBack();
+    } else {
+      vb = "0 0 240 470"; base = bdBaseFront(); mus = bdMusclesFront();
+    }
+    return '<svg class="bd-figure" viewBox="' + vb + '" role="img" aria-label="Body muscles, ' + bodyView + ' view">' +
+      base + mus + '</svg>';
+  }
+
+  // ---- panel builders ----
+  function bodyMeterRow(id, key, label){
+    var v = bodyMuscle(id)[key];
+    return '<div class="bd-meter">' +
+      '<div class="mrow"><span class="mname">' + label + '</span>' +
+      '<span class="mval" data-bd-out="' + id + '-' + key + '">' + v + '</span></div>' +
+      '<input type="range" class="bd-range" min="0" max="100" step="1" value="' + v + '" ' +
+      'data-bd-range="' + id + '" data-bd-key="' + key + '" aria-label="' + esc(label) + '">' +
+    '</div>';
+  }
+  function bodyListRows(){
+    var q = bodySearch.trim().toLowerCase();
+    var rows = bodyAllRecords().filter(function(x){
+      var rec = x.rec;
+      if (bodyFilter === "rated" && !(rec.rate > 0)) return false;
+      if (bodyFilter === "highlight" && !rec.highlight) return false;
+      if (!q) return true;
+      return x.def.name.toLowerCase().indexOf(q) !== -1 || x.def.region.toLowerCase().indexOf(q) !== -1;
+    });
+    rows.sort(function(a,b){
+      if (b.rec.rate !== a.rec.rate) return b.rec.rate - a.rec.rate;
+      if (a.def.region !== b.def.region) return a.def.region < b.def.region ? -1 : 1;
+      return a.def.name.localeCompare(b.def.name);
+    });
+    if (!rows.length) return '<div class="d" style="margin:0">No muscles match that filter.</div>';
+    return rows.map(function(x){
+      var rec = x.rec;
+      var mark = rec.highlight ? "★" : (rec.rate > 0 ? "•" : "·");
+      var cls = rec.highlight ? " hi" : (rec.rate > 0 ? " on" : "");
+      return '<button type="button" class="bd-list-row' + (x.def.id === bodyMuscleId ? " sel" : "") + '" data-bd-pick="' + x.def.id + '">' +
+        '<span class="bd-swatch' + cls + '" aria-hidden="true">' + mark + '</span>' +
+        '<span class="nm">' + esc(x.def.name) + '<div class="rg">' + esc(x.def.region) + '</div></span>' +
+        '<span class="minibar"><div style="width:' + rec.rate + '%"></div></span>' +
+        '<span class="pct">' + rec.rate + '</span>' +
+      '</button>';
+    }).join("");
+  }
+  function bodyPostureRows(){
+    return POSTURE_PROBLEMS.map(function(name){
+      var rec = bodyProblem(name);
+      return '<div class="bd-posture-row' + (rec.percent > 0 ? " on" : "") + '" data-bd-prow="' + bodyPostureId(name) + '">' +
+        '<button type="button" class="bd-swatch' + (rec.percent > 0 ? " on" : "") + '" data-bd-ptoggle="' + bodyPostureId(name) + '" ' +
+        'aria-label="Toggle ' + esc(name) + '" title="Mark ' + esc(name) + ' as present / clear it">' + (rec.percent > 0 ? "✓" : "+") + '</button>' +
+        '<span class="pn">' + esc(name) + '</span>' +
+        '<input type="range" class="bd-range" style="flex:1;min-width:104px" min="0" max="100" step="1" value="' + rec.percent + '" ' +
+        'data-bd-prange="' + bodyPostureId(name) + '" aria-label="' + esc(name) + ' severity">' +
+        '<span class="pctv" data-bd-pout="' + bodyPostureId(name) + '">' + rec.percent + '%</span>' +
+      '</div>';
+    }).join("");
+  }
+
+  // ---- render ----
+  function renderBody(){
+    var main = document.getElementById("mainArea");
+    main.innerHTML = "";
+    var layout = document.createElement("div");
+    layout.className = "body-layout";
+
+    // left: figure
+    var left = document.createElement("div");
+    left.innerHTML =
+      '<div class="bd-viewbar">' +
+        [["front","Front"],["side","Side"],["back","Back"]].map(function(v){
+          return '<button type="button" class="chip' + (bodyView === v[0] ? " selected" : "") + '" data-bd-view="' + v[0] + '">' + v[1] + '</button>';
+        }).join("") +
+      '</div>' +
+      '<div class="bd-figure-wrap">' + bodyFigureSVG() +
+        '<div class="bd-legend">' +
+          '<span><b class="k-unrated"></b>Not rated</span>' +
+          '<span><b class="k-rated"></b>Rated</span>' +
+          '<span><b class="k-hi"></b>Highlighted</span>' +
+          '<span><b class="k-sel"></b>Selected</span>' +
+        '</div>' +
+      '</div>';
+    layout.appendChild(left);
+
+    // right column
+    var right = document.createElement("div");
+
+    var stats = document.createElement("div");
+    stats.className = "set-card";
+    stats.innerHTML = "<h3>Body overview</h3>" +
+      "<div class='d'>Every muscle, its current rate and how many you've highlighted. Tap a muscle on the figure to rate it.</div>" +
+      '<div class="bd-stat-row" id="bdStats"></div>';
+    right.appendChild(stats);
+
+    var panel = document.createElement("div");
+    panel.className = "set-card";
+    panel.id = "bdPanel";
+    right.appendChild(panel);
+
+    var list = document.createElement("div");
+    list.className = "set-card";
+    var rated = bodyMuscleStats();
+    list.innerHTML = "<h3>All muscles</h3>" +
+      "<div class='d'>Sorted by rate, highest first. Tap a row to edit that muscle.</div>" +
+      "<input type='search' id='bdSearch' placeholder='Search muscles…' value='" + esc(bodySearch) + "' style='margin-bottom:10px'>" +
+      "<div class='bd-viewbar' style='margin-bottom:10px'>" +
+        [["off","All"],["rated","Rated"],["highlight","Highlighted"]].map(function(f){
+          return '<button type="button" class="chip' + (bodyFilter === f[0] ? " selected" : "") + '" data-bd-filter="' + f[0] + '">' + f[1] + '</button>';
+        }).join("") +
+      "</div>" +
+      '<div class="bd-list" id="bdList"></div>';
+    right.appendChild(list);
+
+    var posture = document.createElement("div");
+    posture.className = "set-card";
+    posture.id = "bdPosture";
+    right.appendChild(posture);
+
+    layout.appendChild(right);
+    main.appendChild(layout);
+
+    syncBodyStats();
+    syncBodyPanel();
+    syncBodyList();
+    syncBodyPosture();
+    bindBody(left, right);
+  }
+
+  function syncBodyStats(){
+    var host = document.getElementById("bdStats");
+    if (!host) return;
+    var s = bodyMuscleStats();
+    host.innerHTML =
+      "<div class='bd-stat'><div class='lbl'>Rated</div><div class='val'>" + s.rated + "<small>/" + s.total + "</small></div></div>" +
+      "<div class='bd-stat'><div class='lbl'>Avg rate</div><div class='val'>" + s.avg + "</div></div>" +
+      "<div class='bd-stat'><div class='lbl'>Highlighted</div><div class='val'>" + s.hi + "</div></div>" +
+      "<div class='bd-stat'><div class='lbl'>Unrated</div><div class='val'>" + (s.total - s.rated) + "</div></div>";
+  }
+
+  function syncBodyPanel(){
+    var host = document.getElementById("bdPanel");
+    if (!host) return;
+    var def = bodyMuscleId ? bodyMuscleById(bodyMuscleId) : null;
+    if (!def){
+      host.innerHTML = "<h3>Muscle properties</h3>" +
+        "<div class='d'>Tap a muscle on the figure, or pick one from the list below, to set its rate, efficiency, shape, highlight and note.</div>";
+      return;
+    }
+    var rec = bodyMuscle(def.id);
+    host.innerHTML = "<h3>" + esc(def.name) + ' <span class="tag">' + esc(def.region) + "</span></h3>" +
+      "<div class='d'>Rate = overall development · Efficiency = how well you use it · Shape = how it looks. Everything saves as you move.</div>" +
+      bodyMeterRow(def.id, "rate", "Rate") +
+      bodyMeterRow(def.id, "efficiency", "Efficiency") +
+      bodyMeterRow(def.id, "shape", "Shape") +
+      "<div class='bd-viewbar' style='margin:2px 0 14px'>" +
+        '<button type="button" class="btn small' + (rec.highlight ? " primary" : "") + '" data-bd-hi="' + def.id + '">' +
+          (rec.highlight ? "★ Highlighted — remove" : "☆ Highlight muscle") + "</button>" +
+        '<button type="button" class="btn small ghost" data-bd-clear="' + def.id + '">Reset</button>' +
+      "</div>" +
+      "<div class='field' style='margin:0'><label>Note</label>" +
+        "<textarea data-bd-note='" + def.id + "' rows='3' maxlength='500' placeholder='e.g. right side lags the left, feels tight after pressing…'>" + esc(rec.note) + "</textarea></div>";
+    bindBodyPanel(host);
+  }
+
+  function syncBodyList(){
+    var host = document.getElementById("bdList");
+    if (!host) return;
+    host.innerHTML = bodyListRows();
+    host.querySelectorAll("[data-bd-pick]").forEach(function(btn){
+      btn.addEventListener("click", function(){ selectBodyMuscle(btn.getAttribute("data-bd-pick")); });
+    });
+  }
+
+  function syncBodyPosture(){
+    var host = document.getElementById("bdPosture");
+    if (!host) return;
+    var st = bodyPostureStats();
+    host.innerHTML = "<h3>Posture status</h3>" +
+      "<div class='d'>Mark the problems you have and set how bad each one is. Score = 100 minus the average severity.</div>" +
+      "<div class='bd-stat-row' id='bdPostureStats' style='margin-bottom:14px'></div>" +
+      '<div class="bd-list">' + bodyPostureRows() + "</div>" +
+      "<div class='field' style='margin:16px 0 0'><label>Posture notes</label>" +
+        "<textarea data-bd-posture-note rows='3' maxlength='1000' placeholder='e.g. shoulders creep forward after desk work, worse in the morning…'>" +
+        esc(bodyStore().posture.status) + "</textarea></div>";
+    bindBodyPosture(host);
+    syncPostureStats();
+  }
+
+  function syncPostureStats(){
+    var host = document.getElementById("bdPostureStats");
+    if (!host) return;
+    var st = bodyPostureStats();
+    host.innerHTML =
+      "<div class='bd-stat'><div class='lbl'>Posture score</div><div class='val'>" + st.score + "</div></div>" +
+      "<div class='bd-stat'><div class='lbl'>Problems</div><div class='val'>" + st.active.length + "<small>/" + POSTURE_PROBLEMS.length + "</small></div></div>" +
+      "<div class='bd-stat'><div class='lbl'>Avg severity</div><div class='val'>" + st.avg + "<small>%</small></div></div>";
+  }
+
+  function syncBodyFigure(){
+    var svg = document.querySelector(".bd-figure");
+    if (!svg) return;
+    svg.querySelectorAll(".bd-muscle").forEach(function(g){
+      var id = g.getAttribute("data-muscle");
+      var rec = bodyMuscle(id);
+      g.classList.toggle("rated", rec.rate > 0);
+      g.classList.toggle("hi", rec.highlight);
+      g.classList.toggle("sel", id === bodyMuscleId);
+    });
+  }
+
+  function selectBodyMuscle(id){
+    bodyMuscleId = bodyMuscleById(id) ? id : null;
+    syncBodyPanel();
+    syncBodyList();
+    syncBodyFigure();
+    var panel = document.getElementById("bdPanel");
+    if (panel && panel.scrollIntoView) panel.scrollIntoView({ block:"nearest" });
+  }
+
+  // ---- events ----
+  function bindBody(left, right){
+    left.querySelectorAll("[data-bd-view]").forEach(function(btn){
+      btn.addEventListener("click", function(){ bodyView = btn.getAttribute("data-bd-view"); renderBody(); });
+    });
+    left.querySelectorAll(".bd-muscle").forEach(function(g){
+      g.addEventListener("click", function(){ selectBodyMuscle(g.getAttribute("data-muscle")); });
+    });
+    right.querySelectorAll("[data-bd-filter]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        bodyFilter = btn.getAttribute("data-bd-filter");
+        right.querySelectorAll("[data-bd-filter]").forEach(function(b){
+          b.classList.toggle("selected", b.getAttribute("data-bd-filter") === bodyFilter);
+        });
+        syncBodyList();
+      });
+    });
+    var search = document.getElementById("bdSearch");
+    if (search){
+      search.addEventListener("input", function(){ bodySearch = search.value; syncBodyList(); });
+    }
+  }
+
+  function bindBodyPanel(host){
+    host.querySelectorAll("[data-bd-range]").forEach(function(el){
+      el.addEventListener("input", function(){
+        var id = el.getAttribute("data-bd-range");
+        var key = el.getAttribute("data-bd-key");
+        var v = clampPct(el.value);
+        bodyMuscle(id)[key] = v;
+        saveState();
+        var out = host.querySelector('[data-bd-out="' + id + '-' + key + '"]');
+        if (out) out.textContent = v;
+        syncBodyFigure();
+        syncBodyStats();
+        syncBodyList();
+      });
+    });
+    var note = host.querySelector("[data-bd-note]");
+    if (note){
+      note.addEventListener("input", function(){
+        bodyMuscle(note.getAttribute("data-bd-note")).note = note.value;
+        saveState();
+      });
+    }
+    var hi = host.querySelector("[data-bd-hi]");
+    if (hi){
+      hi.addEventListener("click", function(){
+        var id = hi.getAttribute("data-bd-hi");
+        bodyMuscle(id).highlight = !bodyMuscle(id).highlight;
+        saveState();
+        syncBodyPanel();
+        syncBodyFigure();
+        syncBodyStats();
+        syncBodyList();
+      });
+    }
+    var clr = host.querySelector("[data-bd-clear]");
+    if (clr){
+      clr.addEventListener("click", function(){
+        var id = clr.getAttribute("data-bd-clear");
+        bodyStore().muscles[id] = { rate:0, efficiency:0, shape:0, highlight:false, note:"" };
+        saveState();
+        syncBodyPanel();
+        syncBodyFigure();
+        syncBodyStats();
+        syncBodyList();
+        showToast("Muscle reset");
+      });
+    }
+  }
+
+  function bindBodyPosture(host){
+    host.querySelectorAll("[data-bd-ptoggle]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var id = btn.getAttribute("data-bd-ptoggle");
+        var name = null;
+        POSTURE_PROBLEMS.forEach(function(n){ if (bodyPostureId(n) === id) name = n; });
+        if (!name) return;
+        var rec = bodyProblem(name);
+        rec.percent = rec.percent > 0 ? 0 : 40;
+        saveState();
+        syncBodyPosture();
+      });
+    });
+    host.querySelectorAll("[data-bd-prange]").forEach(function(el){
+      el.addEventListener("input", function(){
+        var id = el.getAttribute("data-bd-prange");
+        var name = null;
+        POSTURE_PROBLEMS.forEach(function(n){ if (bodyPostureId(n) === id) name = n; });
+        if (!name) return;
+        var v = clampPct(el.value);
+        bodyProblem(name).percent = v;
+        saveState();
+        var row = host.querySelector('[data-bd-prow="' + id + '"]');
+        if (row){
+          row.classList.toggle("on", v > 0);
+          var sw = row.querySelector(".bd-swatch");
+          if (sw){ sw.classList.toggle("on", v > 0); sw.textContent = v > 0 ? "✓" : "+"; }
+          var out = row.querySelector(".pctv");
+          if (out) out.textContent = v + "%";
+        }
+        syncPostureStats();
+      });
+    });
+    var note = host.querySelector("[data-bd-posture-note]");
+    if (note){
+      note.addEventListener("input", function(){
+        bodyStore().posture.status = note.value;
+        saveState();
+      });
+    }
+  }
+
   function renderSettings(){
     var main = document.getElementById("mainArea");
     main.innerHTML = "";
@@ -3602,6 +4293,7 @@
     if (!parsed.weights || typeof parsed.weights !== "object") parsed.weights = {};
     if (!Array.isArray(parsed.restDays)) parsed.restDays = [];
     if (!Array.isArray(parsed.workouts)) parsed.workouts = [];
+    parsed.body = normalizeBody(parsed.body);
     parsed.workouts.forEach(function(w){
       if (!w.id) w.id = uid();
       if (!Array.isArray(w.exercises)) w.exercises = [];
@@ -3672,6 +4364,16 @@
         var idx = state.workouts.findIndex(function(w){ return w.id === incoming.id; });
         if (idx === -1) state.workouts.push(incoming); else state.workouts[idx] = incoming;
       });
+      // Body muscle ratings + posture status: incoming values win per muscle.
+      var incomingBody = normalizeBody(pendingImportPayload.body);
+      var mergedBody = normalizeBody(state.body);
+      Object.keys(incomingBody.muscles).forEach(function(id){ mergedBody.muscles[id] = incomingBody.muscles[id]; });
+      incomingBody.posture.problems.forEach(function(p){
+        var idx = mergedBody.posture.problems.findIndex(function(x){ return x.id === p.id; });
+        if (idx === -1) mergedBody.posture.problems.push(p); else mergedBody.posture.problems[idx] = p;
+      });
+      mergedBody.posture.status = incomingBody.posture.status || mergedBody.posture.status;
+      state.body = mergedBody;
     }
     activeCatId = state.categories.length ? state.categories[0].id : null;
     saveState();
