@@ -175,12 +175,19 @@
 
   /* ---------- Top-level section nav ---------- */
   .main-nav {
+    position: sticky;
+    bottom: 12px;
+    z-index: 22;
     display: flex;
     gap: 6px;
     margin-top: 14px;
-    background: var(--surface-2);
-    border-radius: 11px;
-    padding: 4px;
+    margin-bottom: 8px;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 5px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(10px);
   }
   .main-nav button {
     flex: 1;
@@ -190,7 +197,7 @@
     font-weight: 700;
     font-size: 13px;
     padding: 9px 10px;
-    border-radius: 8px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -957,17 +964,13 @@
       </div>
     </div>
 
-    <div hidden aria-hidden="true">
-      <button class="btn" id="exportBtn" type="button">Export backup</button>
-      <button class="btn" id="importBtn" type="button">Import backup</button>
-      <input type="file" id="importFile" accept="application/json">
-    </div>
+    <input type="file" id="importFile" accept="application/json" hidden>
 
     <nav class="main-nav" id="mainNav" aria-label="Sections">
       <button type="button" data-tab="library" class="active" aria-current="page">📚 Library</button>
       <button type="button" data-tab="plans" aria-current="false">📋 Plans</button>
       <button type="button" data-tab="calendar" aria-current="false">🗓 Calendar</button>
-      <button type="button" data-tab="body" aria-current="false">🦵 Body</button>
+      <button type="button" data-tab="muscle" aria-current="false">💪 Muscle</button>
       <button type="button" data-tab="settings" aria-current="false">⚙️ Settings</button>
     </nav>
 
@@ -1729,7 +1732,7 @@
     if (mainTab === "library"){ renderTabs(); renderLibrary(); }
     else if (mainTab === "plans"){ renderPlans(); }
     else if (mainTab === "calendar"){ renderCalendar(); }
-    else if (mainTab === "body"){ renderBody(); }
+    else if (mainTab === "muscle"){ renderBody(); }
     else if (mainTab === "settings"){ renderSettings(); }
   }
 
@@ -3350,7 +3353,7 @@
   // BUILD_ID is replaced with a unique id by build.mjs when the app is published
   // to dist/. It stays "dev" when this source file is opened directly, and the
   // update check then just reports that it can't compare builds.
-  var BUILD_ID = (typeof "iron-log-2026-10-02T08-49-58-muqq2q6e" !== "undefined") ? String("iron-log-2026-10-02T08-49-58-muqq2q6e") : "dev";
+  var BUILD_ID = (typeof "iron-log-2026-10-02T09-00-03-muqqfp8s" !== "undefined") ? String("iron-log-2026-10-02T09-00-03-muqqfp8s") : "dev";
   var APP_VERSION = "v10.0 — Body tab, offline + auto-update (" + BUILD_ID.slice(-8) + ")";
   var SW_CACHE_PREFIX = "iron-log-";
   var backupDirHandle = null;
@@ -4085,45 +4088,10 @@
     var layout = document.createElement("div");
     layout.className = "body-layout";
 
-    // left: figure
     var left = document.createElement("div");
-    left.className = "bd-map-panel";
-    left.innerHTML =
-      '<div class="bd-viewbar" role="group" aria-label="Body view">' +
-        [["front","Front"],["side","Side"],["back","Back"]].map(function(v){
-          return '<button type="button" class="chip' + (bodyView === v[0] ? " selected" : "") + '" data-bd-view="' + v[0] + '" aria-pressed="' + (bodyView === v[0] ? 'true' : 'false') + '">' + v[1] + '</button>';
-        }).join("") +
-      '</div>' +
-      '<div class="bd-figure-wrap" data-body-stage aria-label="Swipe left or right to change body view">' + bodyFigureSVG() +
-        '<div class="bd-legend">' +
-          '<span><b class="k-unrated"></b>Not rated</span>' +
-          '<span><b class="k-rated"></b>Rated</span>' +
-          '<span><b class="k-hi"></b>Highlighted</span>' +
-          '<span><b class="k-sel"></b>Selected</span>' +
-        '</div>' +
-      '</div>';
-    layout.appendChild(left);
-
-    // right column
-    var right = document.createElement("div");
-
-    var stats = document.createElement("div");
-    stats.className = "set-card";
-    stats.innerHTML = "<h3>Body overview</h3>" +
-      "<div class='d'>Every muscle, its current rate and how many you've highlighted. Tap a muscle on the figure to rate it.</div>" +
-      '<div class="bd-stat-row" id="bdStats"></div>';
-    right.appendChild(stats);
-
-    var panel = document.createElement("div");
-    panel.className = "set-card";
-    panel.id = "bdPanel";
-    right.appendChild(panel);
-
-    var list = document.createElement("div");
-    list.className = "set-card";
-    var rated = bodyMuscleStats();
-    list.innerHTML = "<h3>All muscles</h3>" +
-      "<div class='d'>Sorted by rate, highest first. Tap a row to edit that muscle.</div>" +
+    left.className = "set-card";
+    left.innerHTML = "<h3>All muscles</h3>" +
+      "<div class='d'>Track every muscle and keep focus on the areas you need most.</div>" +
       "<input type='search' id='bdSearch' placeholder='Search muscles…' value='" + esc(bodySearch) + "' style='margin-bottom:10px'>" +
       "<div class='bd-viewbar' style='margin-bottom:10px'>" +
         [["off","All"],["rated","Rated"],["highlight","Highlighted"]].map(function(f){
@@ -4131,7 +4099,21 @@
         }).join("") +
       "</div>" +
       '<div class="bd-list" id="bdList"></div>';
-    right.appendChild(list);
+    layout.appendChild(left);
+
+    var right = document.createElement("div");
+
+    var stats = document.createElement("div");
+    stats.className = "set-card";
+    stats.innerHTML = "<h3>Muscle overview</h3>" +
+      "<div class='d'>Review the total muscle count, average rating, and highlighted areas.</div>" +
+      '<div class="bd-stat-row" id="bdStats"></div>';
+    right.appendChild(stats);
+
+    var panel = document.createElement("div");
+    panel.className = "set-card";
+    panel.id = "bdPanel";
+    right.appendChild(panel);
 
     var posture = document.createElement("div");
     posture.className = "set-card";
@@ -4164,8 +4146,8 @@
     if (!host) return;
     var def = bodyMuscleId ? bodyMuscleById(bodyMuscleId) : null;
     if (!def){
-      host.innerHTML = "<h3>Body overview</h3>" +
-        "<div class='d'>Select a muscle on the map or from the list to see its training volume, recovery and progress.</div>";
+      host.innerHTML = "<h3>Muscle overview</h3>" +
+        "<div class='d'>Select a muscle from the list to see its training volume, recovery, and progress.</div>";
       return;
     }
     var rec = bodyMuscle(def.id);
@@ -4226,7 +4208,7 @@
     var host = document.getElementById("bdPosture");
     if (!host) return;
     var st = bodyPostureStats();
-    host.innerHTML = "<h3>Posture status</h3>" +
+    host.innerHTML = "<h3>Posture Fix</h3>" +
       "<div class='d'>Mark the problems you have and set how bad each one is. Score = 100 minus the average severity.</div>" +
       "<div class='bd-stat-row' id='bdPostureStats' style='margin-bottom:14px'></div>" +
       '<div class="bd-list">' + bodyPostureRows() + "</div>" +
