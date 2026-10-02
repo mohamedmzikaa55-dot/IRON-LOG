@@ -36,6 +36,10 @@
     --good: #1E8E5A;
     --good-soft: #DFF3E8;
     --danger: #C43D3D;
+    --bd-untrained: #2A2E3D;
+    --bd-rated: #FF5722;
+    --bd-worked: #2ECC71;
+    --bd-outline: #FFFFFF;
     --shadow: 0 1px 2px rgba(20,24,31,0.06), 0 8px 24px rgba(20,24,31,0.06);
   }
   :root:not([data-theme="light"]) {
@@ -52,6 +56,7 @@
       --good: #3ECF8E;
       --good-soft: #17301F;
       --danger: #FF6B6B;
+      --bd-outline: #838A96;
       --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
     }
   }
@@ -68,6 +73,7 @@
     --good: #3ECF8E;
     --good-soft: #17301F;
     --danger: #FF6B6B;
+    --bd-outline: #838A96;
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
   }
 
@@ -136,8 +142,9 @@
     gap: 10px;
   }
   .brand svg { flex: none; }
+  .brand-text { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
   .brand-text h1 { font-size: 22px; line-height: 1; }
-  .brand-text p { margin: 3px 0 0; font-size: 12.5px; color: var(--text-dim); letter-spacing: 0.03em; }
+  .brand-text p { margin: 0; font-size: 11.5px; color: var(--text-dim); }
 
   .top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .btn {
@@ -551,24 +558,29 @@
     margin-top: 12px;
     align-items: start;
   }
+  .body-layout > * { min-width: 0; }
   @media (max-width: 860px) {
     .body-layout { grid-template-columns: 1fr; }
   }
-  .bd-viewbar { display: flex; gap: 6px; margin-bottom: 10px; }
-  .bd-viewbar .chip { flex: 1; padding: 7px 10px; font-size: 12.5px; }
-  .bd-figure-wrap { border: 1px solid var(--border); background: var(--surface); border-radius: 12px; padding: 12px; box-shadow: var(--shadow); }
-  .bd-figure { display: block; width: 100%; height: auto; max-height: 62vh; margin: 0 auto; }
-  .bd-body { fill: var(--surface-2); stroke: var(--border); stroke-width: 1.4; }
-  .bd-muscle { fill: var(--border); stroke: var(--surface); stroke-width: 1.1; cursor: pointer; transition: fill .15s ease; }
+  .bd-map-panel { min-width: 0; }
+  .bd-viewbar { display: flex; min-width: 0; gap: 6px; margin-bottom: 10px; }
+  .bd-viewbar .chip { flex: 1 1 0; min-width: 0; padding: 7px 10px; font-size: 12.5px; }
+  .bd-figure-wrap { min-width: 0; max-width: 100%; border: 1px solid var(--border); background: var(--surface); border-radius: 12px; padding: 12px; box-shadow: var(--shadow); text-align: center; }
+  .bd-figure { display: block; width: auto; height: min(62vh, 620px); max-width: 100%; margin: 0 auto; touch-action: pan-y; }
+  .bd-body { fill: color-mix(in srgb, var(--text-dim) 28%, var(--surface-2)); stroke: var(--surface); stroke-width: 1.4; }
+  .bd-hair { fill: #252525; stroke: none; pointer-events: none; }
+  .bd-detail { fill: none; stroke: var(--surface); stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+  .bd-muscle { fill: var(--bd-untrained); stroke: var(--bd-outline); stroke-width: 1.35; stroke-linejoin: round; cursor: pointer; transition: fill .15s ease, stroke .15s ease; }
   .bd-muscle:hover { fill: var(--text-dim); }
-  .bd-muscle.rated { fill: var(--accent); }
-  .bd-muscle.hi { fill: var(--good); stroke: var(--good); }
-  .bd-muscle.sel { stroke: var(--text); stroke-width: 2.4; }
+  .bd-muscle.rated { fill: var(--bd-rated); }
+  .bd-muscle.hi { fill: var(--bd-worked); stroke: var(--bd-worked); }
+  .bd-muscle.sel { stroke: #FFFFFF; stroke-width: 2.8; filter: drop-shadow(0 0 3px rgba(255,255,255,.72)); }
   .bd-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11.5px; color: var(--text-dim); margin-top: 10px; }
   .bd-legend b { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
   .bd-legend .k-unrated { background: var(--border); }
-  .bd-legend .k-rated { background: var(--accent); }
-  .bd-legend .k-hi { background: var(--good); }
+  .bd-legend .k-unrated { background: var(--bd-untrained); }
+  .bd-legend .k-rated { background: var(--bd-rated); }
+  .bd-legend .k-hi { background: var(--bd-worked); }
   .bd-legend .k-sel { background: var(--surface-2); box-shadow: inset 0 0 0 2px var(--text); }
 
   .bd-stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
@@ -653,6 +665,22 @@
   .bd-posture-row.on { border-color: var(--accent); }
   .bd-posture-row .pn { flex: 1; min-width: 118px; font-size: 13px; font-weight: 600; }
   .bd-posture-row .pctv { flex: none; min-width: 42px; text-align: right; font-family: 'Oswald', system-ui, sans-serif; font-size: 16px; }
+
+  .bd-overview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
+  .bd-overview-item { min-width: 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+  .bd-overview-item .lbl { color: var(--text-dim); font-size: 10.5px; font-weight: 700; text-transform: uppercase; }
+  .bd-overview-item .val { margin-top: 3px; font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
+  .bd-overview-item .hint { margin-top: 2px; color: var(--text-dim); font-size: 11px; }
+  .bd-overview-item.recovering .val { color: var(--accent); }
+  .bd-overview-item.recovered .val { color: var(--good); }
+  .bd-target-row { display: grid; grid-template-columns: minmax(0, 1fr) 96px; align-items: center; gap: 8px; margin: 8px 0 12px; }
+  .bd-target-row label { color: var(--text-dim); font-size: 12px; font-weight: 600; }
+  .bd-target-row input { padding: 7px 9px; }
+  .bd-week-progress { height: 8px; overflow: hidden; border-radius: 999px; background: var(--surface-2); }
+  .bd-week-progress div { height: 100%; border-radius: inherit; background: var(--accent); transition: width .2s ease; }
+  .bd-quick-log { display: flex; gap: 8px; align-items: center; margin: 12px 0; }
+  .bd-quick-log select { min-width: 0; flex: 1; }
+  .bd-quick-log .btn { flex: none; }
 
   .empty {
     padding: 60px 20px;
@@ -851,6 +879,38 @@
     .adv-timers { grid-template-columns: 1fr 1fr 1fr; }
     .adv-total-wrap .big-timer { font-size: 32px; }
   }
+  @media (max-width: 720px) {
+    .app { padding: 0 12px calc(96px + env(safe-area-inset-bottom, 0px)); }
+    header.top { padding-top: calc(env(safe-area-inset-top, 0px) + 8px); padding-bottom: 5px; background: var(--bg); }
+    .top-row { gap: 8px; }
+    .brand { gap: 8px; }
+    .brand svg { width: 30px; height: 30px; }
+    .brand-text { gap: 7px; }
+    .brand-text h1 { font-size: 20px; }
+    .brand-text p { font-size: 10px; }
+    .top-actions { gap: 6px; }
+    .top-actions .btn { padding: 7px 9px; }
+    .main-nav {
+      position: fixed;
+      inset: auto 10px calc(8px + env(safe-area-inset-bottom, 0px));
+      z-index: 80;
+      margin: 0;
+      gap: 2px;
+      padding: 5px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--surface) 94%, transparent);
+      box-shadow: 0 8px 28px rgba(0,0,0,.22);
+      backdrop-filter: blur(14px);
+    }
+    .main-nav button { flex-direction: column; gap: 2px; min-width: 0; padding: 7px 2px; font-size: 10px; line-height: 1.1; white-space: nowrap; }
+    .main-nav button.active { color: var(--accent); background: var(--accent-soft); box-shadow: none; }
+    .cats { padding-top: 8px; margin-bottom: 2px; }
+    .body-layout { gap: 10px; }
+    .bd-figure { height: min(56vh, 520px); }
+    .bd-figure-wrap { padding: 8px; }
+    .toast { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+  }
   .adv-ex-pos { font-size: 12px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
   .adv-ex-name { font-family: 'Oswald', system-ui, sans-serif; font-size: 21px; text-transform: uppercase; margin-bottom: 8px; }
   .adv-set-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
@@ -891,21 +951,24 @@
       </div>
       <div class="top-actions">
         <button class="btn icon theme-toggle" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">🌗</button>
-        <button class="btn" id="exportBtn" title="Export backup" aria-label="Export backup"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg><span>Export</span></button>
-        <button class="btn" id="importBtn" title="Import backup" aria-label="Import backup"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"/><path d="M7 14l5-5 5 5"/><path d="M4 3h16"/></svg><span>Import</span></button>
-        <input type="file" id="importFile" accept="application/json" class="sr-only">
         <button class="btn primary" id="addCatBtn">+ Category</button>
         <button class="btn primary" id="addPlanBtn" style="display:none;">+ Plan</button>
         <button class="btn primary" id="addScheduleBtn" style="display:none;">+ Schedule</button>
       </div>
     </div>
 
+    <div hidden aria-hidden="true">
+      <button class="btn" id="exportBtn" type="button">Export backup</button>
+      <button class="btn" id="importBtn" type="button">Import backup</button>
+      <input type="file" id="importFile" accept="application/json">
+    </div>
+
     <nav class="main-nav" id="mainNav" aria-label="Sections">
-      <button data-tab="library" class="active">📚 Library</button>
-      <button data-tab="plans">📋 Plans</button>
-      <button data-tab="calendar">🗓 Calendar</button>
-      <button data-tab="body">🦵 Body</button>
-      <button data-tab="settings">⚙️ Settings</button>
+      <button type="button" data-tab="library" class="active" aria-current="page">📚 Library</button>
+      <button type="button" data-tab="plans" aria-current="false">📋 Plans</button>
+      <button type="button" data-tab="calendar" aria-current="false">🗓 Calendar</button>
+      <button type="button" data-tab="body" aria-current="false">🦵 Body</button>
+      <button type="button" data-tab="settings" aria-current="false">⚙️ Settings</button>
     </nav>
 
     <nav class="cats" id="catTabs" aria-label="Workout categories"></nav>
@@ -1659,7 +1722,9 @@
     document.getElementById("addPlanBtn").style.display = mainTab === "plans" ? "" : "none";
     document.getElementById("addScheduleBtn").style.display = mainTab === "calendar" ? "" : "none";
     document.querySelectorAll("#mainNav button").forEach(function(b){
-      b.classList.toggle("active", b.getAttribute("data-tab") === mainTab);
+      var active = b.getAttribute("data-tab") === mainTab;
+      b.classList.toggle("active", active);
+      b.setAttribute("aria-current", active ? "page" : "false");
     });
     if (mainTab === "library"){ renderTabs(); renderLibrary(); }
     else if (mainTab === "plans"){ renderPlans(); }
@@ -3285,7 +3350,7 @@
   // BUILD_ID is replaced with a unique id by build.mjs when the app is published
   // to dist/. It stays "dev" when this source file is opened directly, and the
   // update check then just reports that it can't compare builds.
-  var BUILD_ID = (typeof "iron-log-2026-10-01T21-04-35-muq0vlso" !== "undefined") ? String("iron-log-2026-10-01T21-04-35-muq0vlso") : "dev";
+  var BUILD_ID = (typeof "iron-log-2026-10-02T08-49-58-muqq2q6e" !== "undefined") ? String("iron-log-2026-10-02T08-49-58-muqq2q6e") : "dev";
   var APP_VERSION = "v10.0 — Body tab, offline + auto-update (" + BUILD_ID.slice(-8) + ")";
   var SW_CACHE_PREFIX = "iron-log-";
   var backupDirHandle = null;
@@ -3683,6 +3748,31 @@
   var bodyMuscleId = null;     // selected muscle
   var bodyFilter = "off";      // off | rated | highlight
   var bodySearch = "";
+  var bodyQuickLogExerciseId = "";
+
+  var BODY_MUSCLE_ALIASES = {
+    "pecs": ["Pectorals", "Pectoralis Major"],
+    "front-delts": ["Anterior Delts", "Anterior Deltoid", "Shoulders"],
+    "side-delts": ["Lateral Delts", "Lateral Deltoid", "Shoulders"],
+    "rear-delts": ["Posterior Delts", "Posterior Deltoid", "Shoulders", "Upper Back"],
+    "traps-upper": ["Traps", "Trapezius", "Upper Back"],
+    "traps-mid": ["Traps", "Trapezius", "Upper Back"],
+    "traps-lower": ["Traps", "Trapezius", "Upper Back"],
+    "rhomboids": ["Upper Back"],
+    "lats": ["Latissimus Dorsi"],
+    "teres-major": ["Teres Major", "Upper Back"],
+    "erectors": ["Erectors", "Spine", "Lower Back"],
+    "forearms": ["Forearm Flexors", "Forearm Extensors", "Brachioradialis"],
+    "abs": ["Rectus Abdominis", "Core"],
+    "obliques": ["External Obliques", "Core"],
+    "serratus": ["Serratus Anterior", "Core"],
+    "adductors": ["Inner Thigh", "Legs"],
+    "glutes": ["Gluteus Maximus", "Glutes"],
+    "hamstrings": ["Biceps Femoris", "Semitendinosus", "Legs"],
+    "quads": ["Quadriceps", "Rectus Femoris", "Vastus Lateralis", "Legs"],
+    "calves": ["Gastrocnemius", "Soleus", "Calves"],
+    "tibialis": ["Tibialis Anterior", "Shins"]
+  };
 
   function clampPct(v){
     var n = Math.round(parseFloat(v) || 0);
@@ -3702,13 +3792,14 @@
   }
   function bodyMuscle(id){
     var s = bodyStore();
-    if (!s.muscles[id]) s.muscles[id] = { rate:0, efficiency:0, shape:0, highlight:false, note:"" };
+    if (!s.muscles[id]) s.muscles[id] = { rate:0, efficiency:0, shape:0, highlight:false, note:"", weeklyTarget:0 };
     var r = s.muscles[id];
     r.rate = clampPct(r.rate);
     r.efficiency = clampPct(r.efficiency);
     r.shape = clampPct(r.shape);
     r.highlight = !!r.highlight;
     if (typeof r.note !== "string") r.note = "";
+    r.weeklyTarget = Math.max(0, Math.min(50, Math.round(parseFloat(r.weeklyTarget) || 0)));
     return r;
   }
   function bodyAllRecords(){
@@ -3746,6 +3837,51 @@
     return { rated:rated.length, total:all.length, hi:hi.length, avg:avg };
   }
 
+  function normalizedMuscleTarget(name){
+    return String(name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  }
+  function exerciseTargetsBodyMuscle(exercise, id){
+    var def = bodyMuscleById(id);
+    if (!def) return false;
+    var aliases = [def.name].concat(BODY_MUSCLE_ALIASES[id] || []).map(normalizedMuscleTarget);
+    return normalizeMuscles(exercise.muscle).some(function(row){
+      return aliases.indexOf(normalizedMuscleTarget(row.name)) !== -1;
+    });
+  }
+  function bodyExercisesForMuscle(id){
+    var matches = [];
+    state.categories.forEach(function(cat){
+      (cat.exercises || []).forEach(function(ex){
+        if (exerciseTargetsBodyMuscle(ex, id)) matches.push({ cat:cat, ex:ex });
+      });
+    });
+    return matches;
+  }
+  function bodyTrainingStats(id){
+    var today = todayStr();
+    var weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - 6);
+    var from = weekStart.toISOString().slice(0, 10);
+    var weeklySets = 0;
+    var lastDate = "";
+    state.categories.forEach(function(cat){
+      (cat.exercises || []).forEach(function(ex){
+        if (!exerciseTargetsBodyMuscle(ex, id)) return;
+        (ex.logs || []).forEach(function(log){
+          var date = String(log.date || "").slice(0, 10);
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > today) return;
+          if (date >= from) weeklySets += Array.isArray(log.sets) ? log.sets.length : 0;
+          if (date > lastDate) lastDate = date;
+        });
+      });
+    });
+    var daysSince = null;
+    if (lastDate){
+      daysSince = Math.floor((new Date(today + "T00:00:00") - new Date(lastDate + "T00:00:00")) / 86400000);
+    }
+    return { weeklySets:weeklySets, lastDate:lastDate, daysSince:daysSince };
+  }
+
   // ---- figure geometry (stylised mannequin; each muscle is a click group) ----
   function bdMus(id, inner){
     // Bake the rating state in, so a fresh render (tab switch, view switch)
@@ -3755,91 +3891,100 @@
     if (rec.rate > 0) cls += " rated";
     if (rec.highlight) cls += " hi";
     if (id === bodyMuscleId) cls += " sel";
-    return '<g class="' + cls + '" data-muscle="' + id + '">' + inner + '</g>';
+    var def = bodyMuscleById(id);
+    return '<g class="' + cls + '" data-muscle="' + id + '" role="button" tabindex="0" aria-label="' + esc(def ? def.name : id) + '" aria-pressed="' + (id === bodyMuscleId ? 'true' : 'false') + '">' + inner + '</g>';
   }
   function bdLimbs(){
-    return '<rect x="40" y="94" width="26" height="112" rx="13"/>' +
-           '<rect x="38" y="204" width="24" height="118" rx="12"/>' +
-           '<ellipse cx="50" cy="332" rx="13" ry="17"/>' +
-           '<rect x="174" y="94" width="26" height="112" rx="13"/>' +
-           '<rect x="178" y="204" width="24" height="118" rx="12"/>' +
-           '<ellipse cx="190" cy="332" rx="13" ry="17"/>' +
-           '<rect x="78" y="196" width="44" height="128" rx="22"/>' +
-           '<rect x="84" y="318" width="34" height="116" rx="17"/>' +
-           '<rect x="78" y="428" width="44" height="20" rx="9"/>' +
-           '<rect x="118" y="196" width="44" height="128" rx="22"/>' +
-           '<rect x="122" y="318" width="34" height="116" rx="17"/>' +
-           '<rect x="118" y="428" width="44" height="20" rx="9"/>';
+      return '<path d="M63 91C49 92 42 104 41 121L38 173C37 190 40 205 46 218L56 216C59 197 62 179 66 162L72 130C75 113 72 99 63 91Z"/>' +
+        '<path d="M177 91C191 92 198 104 199 121L202 173C203 190 200 205 194 218L184 216C181 197 178 179 174 162L168 130C165 113 168 99 177 91Z"/>' +
+        '<path d="M46 214C40 225 39 243 40 264L42 303C43 315 47 323 53 326C60 319 62 307 61 293L60 248C60 232 55 220 46 214Z"/>' +
+        '<path d="M194 214C200 225 201 243 200 264L198 303C197 315 193 323 187 326C180 319 178 307 179 293L180 248C180 232 185 220 194 214Z"/>' +
+        '<path d="M43 317C36 324 34 335 39 342C44 349 57 349 63 342L59 326Z"/>' +
+        '<path d="M197 317C204 324 206 335 201 342C196 349 183 349 177 342L181 326Z"/>' +
+        '<path d="M82 210C78 231 78 265 81 296C83 313 91 325 103 328L119 324L119 214Z"/>' +
+        '<path d="M120 214L121 324L137 328C149 325 157 313 159 296C162 265 162 231 158 210Z"/>' +
+        '<path d="M88 316C86 338 88 376 92 407C94 423 100 433 111 436L118 432L118 320Z"/>' +
+        '<path d="M122 320L122 432L129 436C140 433 146 423 148 407C152 376 154 338 152 316Z"/>' +
+        '<path d="M92 428C87 433 79 439 78 445C89 451 105 451 118 447L118 432Z"/>' +
+        '<path d="M122 432L122 447C135 451 151 451 162 445C161 439 153 433 148 428Z"/>';
   }
   function bdBaseFront(){
     return '<g class="bd-body">' +
       '<ellipse cx="120" cy="40" rx="23" ry="28"/>' +
       '<rect x="108" y="60" width="24" height="20" rx="6"/>' +
       '<path d="M120 70C148 72 174 82 184 96L178 150L172 194L176 240L148 254L120 254L92 254L64 240L68 194L62 150L56 96C66 82 92 72 120 70Z"/>' +
-      bdLimbs() + '</g>';
+      bdLimbs() +
+      '<path class="bd-hair" d="M98 38C96 24 104 13 119 12C136 11 145 22 142 39L138 49L135 34C126 38 115 37 105 34L102 49Z"/>' +
+      '<path class="bd-detail" d="M111 65L120 84L129 65M109 69L99 91M131 69L141 91M42 326L37 337M47 328L45 342M52 328L53 342M57 326L60 337M198 326L203 337M193 328L195 342M188 328L187 342M183 326L180 337"/>' +
+      '</g>';
   }
   function bdBaseBack(){
     return '<g class="bd-body">' +
       '<ellipse cx="120" cy="40" rx="23" ry="28"/>' +
       '<rect x="108" y="60" width="24" height="20" rx="6"/>' +
       '<path d="M120 70C150 72 178 84 186 100L180 156C178 178 176 192 176 208L178 246L150 258L120 258L90 258L62 246L64 208C64 192 62 178 60 156L54 100C62 84 90 72 120 70Z"/>' +
-      bdLimbs() + '</g>';
+      bdLimbs() +
+      '<path class="bd-hair" d="M98 39C95 24 104 13 119 12C136 11 145 23 142 40L138 49L134 34C125 39 114 38 104 34L102 49Z"/>' +
+      '<path class="bd-detail" d="M111 65L120 84L129 65M109 69L99 91M131 69L141 91M42 326L37 337M47 328L45 342M52 328L53 342M57 326L60 337M198 326L203 337M193 328L195 342M188 328L187 342M183 326L180 337"/>' +
+      '</g>';
   }
   function bdBaseSide(){
     return '<g class="bd-body">' +
-      '<ellipse cx="72" cy="40" rx="22" ry="27"/>' +
-      '<rect x="62" y="60" width="20" height="18" rx="6"/>' +
-      '<path d="M74 70C90 72 102 82 106 96L108 140C108 160 104 178 102 196L108 234L96 258L72 254L54 246L50 200L48 148L50 98C54 82 60 72 74 70Z"/>' +
-      '<rect x="98" y="100" width="24" height="106" rx="12"/>' +
-      '<rect x="98" y="204" width="21" height="112" rx="10"/>' +
-      '<ellipse cx="108" cy="326" rx="12" ry="15"/>' +
-      '<rect x="52" y="200" width="42" height="122" rx="21"/>' +
-      '<rect x="54" y="318" width="34" height="114" rx="17"/>' +
-      '<rect x="46" y="426" width="50" height="20" rx="9"/>' +
+      '<path d="M55 18C65 8 82 10 91 19C96 24 96 31 94 36L99 42L106 46L99 51L97 58C93 66 83 69 73 65C61 60 54 49 52 37C51 29 52 22 55 18Z"/>' +
+      '<path d="M63 59C68 64 77 65 83 60L84 78L67 81Z"/>' +
+      '<path d="M74 70C91 69 105 80 111 95C116 107 111 120 105 132C100 143 100 158 104 174L108 197C109 215 99 234 89 249L72 256L54 247L49 215L47 174L49 127L50 98C53 82 60 73 74 70Z"/>' +
+      '<path d="M99 99C109 94 120 101 123 114L124 158C124 177 120 194 113 207L102 204C98 193 97 178 98 160L97 122C97 112 97 104 99 99Z"/>' +
+      '<path d="M102 202C110 198 119 204 121 216L122 280C122 297 118 310 111 318L101 313L99 267Z"/>' +
+      '<path d="M101 311C107 307 116 312 120 320C123 329 117 338 109 342L99 334Z"/>' +
+      '<path d="M64 207C76 199 91 206 96 221C101 237 97 272 91 296C87 312 80 322 70 325L58 316C54 294 53 266 54 243C55 226 58 213 64 207Z"/>' +
+      '<path d="M60 315C68 308 80 313 84 326C90 348 90 381 86 406C83 422 77 432 68 435C60 429 56 415 55 396L52 346C51 333 54 321 60 315Z"/>' +
+      '<path d="M57 427C66 431 82 429 94 423L97 438C84 449 61 452 46 446C43 439 49 431 57 427Z"/>' +
+      '<path class="bd-hair" d="M52 38C48 30 50 20 57 14C66 6 80 9 89 15C95 19 96 25 93 31C86 29 82 26 76 26C70 29 63 30 58 37L57 48Z"/>' +
+      '<path class="bd-detail" d="M91 37C94 37 96 40 95 43M95 38L104 46L98 48M97 54L102 54M65 62L72 78L82 64M101 326L96 337M106 328L104 341M112 328L114 340M117 325L121 335"/>' +
     '</g>';
   }
   function bdMusclesFront(){
     return bdMus("front-delts",
-        '<ellipse cx="82" cy="106" rx="25" ry="21"/><ellipse cx="158" cy="106" rx="25" ry="21"/>') +
+        '<path d="M61 104C64 88 78 82 94 91C105 98 108 112 101 124C94 136 77 137 67 128C61 122 59 113 61 104Z"/><path d="M179 104C176 88 162 82 146 91C135 98 132 112 139 124C146 136 163 137 173 128C179 122 181 113 179 104Z"/>') +
       bdMus("pecs",
-        '<ellipse cx="101" cy="138" rx="20" ry="16"/><ellipse cx="139" cy="138" rx="20" ry="16"/>') +
+        '<path d="M99 119C106 116 114 119 119 124L118 151C109 156 95 154 86 147C79 141 81 130 87 125C90 122 95 120 99 119Z"/><path d="M141 119C134 116 126 119 121 124L122 151C131 156 145 154 154 147C161 141 159 130 153 125C150 122 145 120 141 119Z"/>') +
       bdMus("serratus",
-        '<ellipse cx="77" cy="158" rx="10" ry="14"/><ellipse cx="163" cy="158" rx="10" ry="14"/>') +
+        '<path d="M83 151C91 155 96 165 93 175L85 184L77 177C75 168 77 158 83 151Z"/><path d="M157 151C149 155 144 165 147 175L155 184L163 177C165 168 163 158 157 151Z"/>') +
       bdMus("abs",
-        '<rect x="102" y="148" width="15" height="15" rx="4"/><rect x="123" y="148" width="15" height="15" rx="4"/>' +
-        '<rect x="102" y="168" width="15" height="15" rx="4"/><rect x="123" y="168" width="15" height="15" rx="4"/>' +
-        '<rect x="102" y="188" width="15" height="15" rx="4"/><rect x="123" y="188" width="15" height="15" rx="4"/>') +
+        '<path d="M102 150C106 147 113 147 118 150L117 164C113 167 107 167 102 164Z"/><path d="M122 150C127 147 134 147 138 150L138 164C133 167 127 167 123 164Z"/>' +
+        '<path d="M102 169C107 166 113 166 117 169L117 183C113 186 107 186 102 183Z"/><path d="M123 169C127 166 133 166 138 169L138 183C133 186 127 186 123 183Z"/>' +
+        '<path d="M101 188C106 185 112 185 117 188L117 203C113 207 106 207 101 203Z"/><path d="M123 188C128 185 134 185 139 188L139 203C134 207 127 207 123 203Z"/>') +
       bdMus("obliques",
-        '<ellipse cx="86" cy="180" rx="13" ry="26"/><ellipse cx="154" cy="180" rx="13" ry="26"/>') +
+        '<path d="M94 157C100 163 101 176 97 190L88 207L77 201L80 177C82 165 87 159 94 157Z"/><path d="M146 157C140 163 139 176 143 190L152 207L163 201L160 177C158 165 153 159 146 157Z"/>') +
       bdMus("biceps",
-        '<ellipse cx="53" cy="142" rx="13" ry="27"/><ellipse cx="187" cy="142" rx="13" ry="27"/>') +
+        '<path d="M55 119C63 121 67 132 65 148L60 169C58 177 52 181 47 177L44 158L46 134C47 126 50 121 55 119Z"/><path d="M185 119C177 121 173 132 175 148L180 169C182 177 188 181 193 177L196 158L194 134C193 126 190 121 185 119Z"/>') +
       bdMus("triceps",
-        '<ellipse cx="56" cy="112" rx="9" ry="15"/><ellipse cx="184" cy="112" rx="9" ry="15"/>') +
+        '<path d="M51 98C57 96 63 100 65 107L64 121L58 132L51 124L48 110Z"/><path d="M189 98C183 96 177 100 175 107L176 121L182 132L189 124L192 110Z"/>') +
       bdMus("forearms",
-        '<rect x="40" y="212" width="20" height="104" rx="10"/><rect x="180" y="212" width="20" height="104" rx="10"/>') +
+        '<path d="M45 207C52 205 59 210 60 220L59 282C59 298 55 310 50 318C44 314 41 301 41 286L40 226C40 216 41 210 45 207Z"/><path d="M195 207C188 205 181 210 180 220L181 282C181 298 185 310 190 318C196 314 199 301 199 286L200 226C200 216 199 210 195 207Z"/>') +
       bdMus("adductors",
-        '<ellipse cx="101" cy="252" rx="10" ry="22"/><ellipse cx="139" cy="252" rx="10" ry="22"/>') +
+        '<path d="M103 226C111 228 116 237 116 251L111 278L101 283L96 261C96 246 98 234 103 226Z"/><path d="M137 226C129 228 124 237 124 251L129 278L139 283L144 261C144 246 142 234 137 226Z"/>') +
       bdMus("quads",
-        '<rect x="80" y="208" width="40" height="112" rx="20"/><rect x="120" y="208" width="40" height="112" rx="20"/>') +
+        '<path d="M84 210C94 204 108 207 116 216L115 276C114 296 108 313 100 322L88 311C82 284 80 247 84 210Z"/><path d="M156 210C146 204 132 207 124 216L125 276C126 296 132 313 140 322L152 311C158 284 160 247 156 210Z"/>') +
       bdMus("tibialis",
-        '<rect x="104" y="324" width="13" height="50" rx="6"/><rect x="123" y="324" width="13" height="50" rx="6"/>') +
+        '<path d="M101 327L115 323L115 369L110 380L103 372Z"/><path d="M139 327L125 323L125 369L130 380L137 372Z"/>') +
       bdMus("calves",
-        '<ellipse cx="101" cy="396" rx="19" ry="32"/><ellipse cx="139" cy="396" rx="19" ry="32"/>');
+        '<path d="M94 372C101 364 112 367 116 381L116 407C114 422 108 430 100 428C92 421 88 405 90 390C90 382 91 376 94 372Z"/><path d="M146 372C139 364 128 367 124 381L124 407C126 422 132 430 140 428C148 421 152 405 150 390C150 382 149 376 146 372Z"/>');
   }
   function bdMusclesSide(){
-    return bdMus("side-delts", '<ellipse cx="98" cy="110" rx="22" ry="22"/>') +
-      bdMus("traps-upper", '<path d="M60 86C72 80 88 84 98 96L94 110C84 98 72 92 60 94Z"/>') +
-      bdMus("pecs", '<path d="M106 120C96 120 92 132 94 146L106 142Z"/>') +
-      bdMus("lats", '<path d="M56 118C72 116 86 130 92 152L88 182L62 176L54 146Z"/>') +
-      bdMus("triceps", '<rect x="100" y="140" width="20" height="62" rx="10"/>') +
-      bdMus("abs", '<rect x="88" y="158" width="18" height="46" rx="9"/>') +
-      bdMus("erectors", '<rect x="58" y="186" width="15" height="62" rx="7"/>') +
-      bdMus("obliques", '<ellipse cx="92" cy="214" rx="15" ry="22"/>') +
-      bdMus("glutes", '<ellipse cx="66" cy="224" rx="23" ry="26"/>') +
-      bdMus("quads", '<path d="M92 252C100 256 100 288 94 316L84 314L82 254Z"/>') +
-      bdMus("hamstrings", '<path d="M54 252C50 256 50 288 56 314L68 312L68 254Z"/>') +
-      bdMus("tibialis", '<ellipse cx="64" cy="340" rx="12" ry="26"/>') +
-      bdMus("calves", '<ellipse cx="72" cy="392" rx="18" ry="32"/>');
+    return bdMus("side-delts", '<path d="M78 96C83 84 99 82 110 90C120 98 121 114 113 125C108 132 98 134 89 128C81 121 76 107 78 96Z"/>') +
+      bdMus("traps-upper", '<path d="M61 82C74 78 89 83 100 94L94 108C84 98 72 92 60 94Z"/>') +
+      bdMus("pecs", '<path d="M103 111C111 112 117 121 116 131C115 140 111 146 105 148C99 145 95 139 95 131C95 122 98 115 103 111Z"/>') +
+      bdMus("lats", '<path d="M57 112C70 112 86 124 93 143L92 170C90 184 83 195 72 203L58 187L53 153Z"/>') +
+      bdMus("triceps", '<path d="M104 139C113 136 121 144 122 157L119 185C118 196 114 203 108 205C102 198 100 185 101 168Z"/>') +
+      bdMus("abs", '<path d="M90 151C96 148 103 152 106 160L105 194C102 201 97 204 91 201Z"/>') +
+      bdMus("erectors", '<path d="M57 183C63 180 71 185 73 194L72 230C70 240 67 247 62 250C57 244 55 235 55 222Z"/>') +
+      bdMus("obliques", '<path d="M91 187C101 191 106 205 102 219L93 238L81 231L82 208C83 198 86 191 91 187Z"/>') +
+      bdMus("glutes", '<path d="M57 202C67 194 83 200 90 212C97 225 91 243 78 253L59 246C52 234 51 215 57 202Z"/>') +
+      bdMus("quads", '<path d="M86 250C94 250 99 263 98 281L92 310L82 320L75 306L78 271C79 260 82 253 86 250Z"/>') +
+      bdMus("hamstrings", '<path d="M56 251C63 245 74 251 76 265L72 300C70 311 65 318 59 318C54 305 52 284 52 267Z"/>') +
+      bdMus("tibialis", '<path d="M58 320C65 316 73 323 74 335L72 358C70 369 66 376 61 377C56 368 54 355 55 340Z"/>') +
+      bdMus("calves", '<path d="M63 365C71 357 83 365 87 379L86 402C83 420 76 429 68 426C60 418 57 401 59 383Z"/>');
   }
   function bdMusclesBack(){
     return bdMus("traps-upper",
@@ -3849,36 +3994,37 @@
       bdMus("traps-lower",
         '<path d="M88 148L106 132L120 128L134 132L152 148L146 168L133 150L120 143L107 150L94 168Z"/>') +
       bdMus("rear-delts",
-        '<ellipse cx="82" cy="112" rx="23" ry="20"/><ellipse cx="158" cy="112" rx="23" ry="20"/>') +
+        '<path d="M61 109C63 94 78 88 92 95C104 100 109 114 102 127C95 139 78 140 68 131C63 126 60 118 61 109Z"/><path d="M179 109C177 94 162 88 148 95C136 100 131 114 138 127C145 139 162 140 172 131C177 126 180 118 179 109Z"/>') +
       bdMus("teres-major",
-        '<ellipse cx="101" cy="152" rx="14" ry="12"/><ellipse cx="139" cy="152" rx="14" ry="12"/>') +
+        '<path d="M87 143C95 137 105 140 111 147L109 160L98 165L88 158Z"/><path d="M153 143C145 137 135 140 129 147L131 160L142 165L152 158Z"/>') +
       bdMus("rhomboids",
         '<path d="M106 132L118 128L118 160L106 168Z"/><path d="M134 132L122 128L122 160L134 168Z"/>') +
       bdMus("lats",
         '<path d="M86 138L104 148L110 202L96 240L76 212L78 158Z"/><path d="M154 138L136 148L130 202L144 240L164 212L162 158Z"/>') +
       bdMus("erectors",
-        '<rect x="106" y="162" width="13" height="80" rx="6"/><rect x="121" y="162" width="13" height="80" rx="6"/>') +
+        '<path d="M107 160C111 157 117 160 118 166L118 231C116 240 113 246 109 246C105 240 104 230 105 216Z"/><path d="M133 160C129 157 123 160 122 166L122 231C124 240 127 246 131 246C135 240 136 230 135 216Z"/>') +
       bdMus("triceps",
-        '<ellipse cx="56" cy="150" rx="12" ry="26"/><ellipse cx="184" cy="150" rx="12" ry="26"/>') +
+        '<path d="M54 123C62 124 68 136 66 152L62 174C60 185 55 190 49 187L45 166L47 140C48 131 50 126 54 123Z"/><path d="M186 123C178 124 172 136 174 152L178 174C180 185 185 190 191 187L195 166L193 140C192 131 190 126 186 123Z"/>') +
       bdMus("glutes",
-        '<ellipse cx="100" cy="234" rx="23" ry="24"/><ellipse cx="140" cy="234" rx="23" ry="24"/>') +
+        '<path d="M79 218C87 204 107 204 117 216L117 244C111 260 96 266 83 256C75 248 74 231 79 218Z"/><path d="M161 218C153 204 133 204 123 216L123 244C129 260 144 266 157 256C165 248 166 231 161 218Z"/>') +
       bdMus("hamstrings",
-        '<rect x="80" y="258" width="36" height="62" rx="18"/><rect x="124" y="258" width="36" height="62" rx="18"/>') +
+        '<path d="M83 260C93 253 106 258 112 269L112 302C110 315 104 323 96 323C88 318 82 303 81 286Z"/><path d="M157 260C147 253 134 258 128 269L128 302C130 315 136 323 144 323C152 318 158 303 159 286Z"/>') +
       bdMus("calves",
-        '<ellipse cx="101" cy="396" rx="19" ry="32"/><ellipse cx="139" cy="396" rx="19" ry="32"/>');
+        '<path d="M94 370C102 363 112 369 116 382L116 408C114 422 108 431 100 429C92 422 89 406 90 391C90 382 91 375 94 370Z"/><path d="M146 370C138 363 128 369 124 382L124 408C126 422 132 431 140 429C148 422 151 406 150 391C150 382 149 375 146 370Z"/>');
   }
 
   function bodyFigureSVG(){
     var base, mus, vb;
+    var transform;
     if (bodyView === "side"){
-      vb = "0 0 150 470"; base = bdBaseSide(); mus = bdMusclesSide();
+      vb = "0 0 150 470"; base = bdBaseSide(); mus = bdMusclesSide(); transform = "translate(-40 0) scale(1.5 1)";
     } else if (bodyView === "back"){
-      vb = "0 0 240 470"; base = bdBaseBack(); mus = bdMusclesBack();
+      vb = "0 0 240 470"; base = bdBaseBack(); mus = bdMusclesBack(); transform = "translate(-30 0) scale(1.25 1)";
     } else {
-      vb = "0 0 240 470"; base = bdBaseFront(); mus = bdMusclesFront();
+      vb = "0 0 240 470"; base = bdBaseFront(); mus = bdMusclesFront(); transform = "translate(-30 0) scale(1.25 1)";
     }
     return '<svg class="bd-figure" viewBox="' + vb + '" role="img" aria-label="Body muscles, ' + bodyView + ' view">' +
-      base + mus + '</svg>';
+      '<g transform="' + transform + '">' + base + mus + '</g></svg>';
   }
 
   // ---- panel builders ----
@@ -3941,13 +4087,14 @@
 
     // left: figure
     var left = document.createElement("div");
+    left.className = "bd-map-panel";
     left.innerHTML =
-      '<div class="bd-viewbar">' +
+      '<div class="bd-viewbar" role="group" aria-label="Body view">' +
         [["front","Front"],["side","Side"],["back","Back"]].map(function(v){
-          return '<button type="button" class="chip' + (bodyView === v[0] ? " selected" : "") + '" data-bd-view="' + v[0] + '">' + v[1] + '</button>';
+          return '<button type="button" class="chip' + (bodyView === v[0] ? " selected" : "") + '" data-bd-view="' + v[0] + '" aria-pressed="' + (bodyView === v[0] ? 'true' : 'false') + '">' + v[1] + '</button>';
         }).join("") +
       '</div>' +
-      '<div class="bd-figure-wrap">' + bodyFigureSVG() +
+      '<div class="bd-figure-wrap" data-body-stage aria-label="Swipe left or right to change body view">' + bodyFigureSVG() +
         '<div class="bd-legend">' +
           '<span><b class="k-unrated"></b>Not rated</span>' +
           '<span><b class="k-rated"></b>Rated</span>' +
@@ -4017,13 +4164,42 @@
     if (!host) return;
     var def = bodyMuscleId ? bodyMuscleById(bodyMuscleId) : null;
     if (!def){
-      host.innerHTML = "<h3>Muscle properties</h3>" +
-        "<div class='d'>Tap a muscle on the figure, or pick one from the list below, to set its rate, efficiency, shape, highlight and note.</div>";
+      host.innerHTML = "<h3>Body overview</h3>" +
+        "<div class='d'>Select a muscle on the map or from the list to see its training volume, recovery and progress.</div>";
       return;
     }
     var rec = bodyMuscle(def.id);
+    var training = bodyTrainingStats(def.id);
+    var recovery = training.daysSince === null
+      ? { label:"No training logged", hint:"Log a session to see recovery", cls:"" }
+      : training.daysSince === 0
+        ? { label:"Trained today", hint:"Recovery window starts today", cls:"recovering" }
+        : training.daysSince === 1
+          ? { label:"Recovering", hint:"Last trained yesterday · within 48h", cls:"recovering" }
+          : { label:"Fully recovered", hint:"Last trained " + training.lastDate, cls:"recovered" };
+    var matches = bodyExercisesForMuscle(def.id);
+    if (matches.length){
+      var hasQuickExercise = matches.some(function(item){ return item.ex.id === bodyQuickLogExerciseId; });
+      if (!hasQuickExercise) bodyQuickLogExerciseId = matches[0].ex.id;
+    }
+    var quickLog = matches.length
+      ? "<div class='bd-quick-log'><select data-bd-quick-exercise aria-label='Exercise to log for " + esc(def.name) + "'>" +
+          matches.map(function(item){
+            return "<option value='" + esc(item.ex.id) + "'" + (item.ex.id === bodyQuickLogExerciseId ? " selected" : "") + ">" + esc(item.ex.name) + " · " + esc(item.cat.name) + "</option>";
+          }).join("") +
+        "</select><button type='button' class='btn primary' data-bd-quick-log>Log set</button></div>"
+      : "<button type='button' class='btn' data-bd-add-exercise>Add exercise for " + esc(def.name) + "</button>";
     host.innerHTML = "<h3>" + esc(def.name) + ' <span class="tag">' + esc(def.region) + "</span></h3>" +
-      "<div class='d'>Rate = overall development · Efficiency = how well you use it · Shape = how it looks. Everything saves as you move.</div>" +
+      "<div class='d'>Training volume and recovery use your logged sessions. Rate, efficiency and shape are personal ratings.</div>" +
+      "<div class='bd-overview'>" +
+        "<div class='bd-overview-item'><div class='lbl'>Weekly volume</div><div class='val'>" + training.weeklySets + " sets</div><div class='hint'>Last 7 days</div></div>" +
+        "<div class='bd-overview-item " + recovery.cls + "'><div class='lbl'>Recovery</div><div class='val'>" + recovery.label + "</div><div class='hint'>" + esc(recovery.hint) + "</div></div>" +
+      "</div>" +
+      "<div class='bd-target-row'><label for='bdWeeklyTarget'>Weekly set target</label><input id='bdWeeklyTarget' data-bd-weekly-target type='number' min='0' max='50' step='1' value='" + (rec.weeklyTarget || "") + "' placeholder='Optional'></div>" +
+      "<div class='bd-week-progress'><div data-bd-week-progress style='width:" + (rec.weeklyTarget ? Math.min(100, Math.round(training.weeklySets / rec.weeklyTarget * 100)) : 0) + "%'></div></div>" +
+      "<div class='d' data-bd-week-copy>" + (rec.weeklyTarget ? training.weeklySets + " / " + rec.weeklyTarget + " sets this week" : "Set a target to track weekly progress") + "</div>" +
+      "<div class='section-title'>Quick log</div>" + quickLog +
+      "<div class='section-title'>Muscle ratings</div>" +
       bodyMeterRow(def.id, "rate", "Rate") +
       bodyMeterRow(def.id, "efficiency", "Efficiency") +
       bodyMeterRow(def.id, "shape", "Shape") +
@@ -4080,6 +4256,7 @@
       g.classList.toggle("rated", rec.rate > 0);
       g.classList.toggle("hi", rec.highlight);
       g.classList.toggle("sel", id === bodyMuscleId);
+      g.setAttribute("aria-pressed", id === bodyMuscleId ? "true" : "false");
     });
   }
 
@@ -4099,7 +4276,38 @@
     });
     left.querySelectorAll(".bd-muscle").forEach(function(g){
       g.addEventListener("click", function(){ selectBodyMuscle(g.getAttribute("data-muscle")); });
+      g.addEventListener("keydown", function(event){
+        if (event.key === "Enter" || event.key === " "){
+          event.preventDefault();
+          selectBodyMuscle(g.getAttribute("data-muscle"));
+        }
+      });
     });
+    var stage = left.querySelector("[data-body-stage]");
+    if (stage){
+      var startX = null;
+      var startY = null;
+      stage.addEventListener("pointerdown", function(event){
+        if (event.pointerType === "mouse") return;
+        startX = event.clientX;
+        startY = event.clientY;
+      });
+      stage.addEventListener("pointerup", function(event){
+        if (startX === null) return;
+        var dx = event.clientX - startX;
+        var dy = event.clientY - startY;
+        startX = null;
+        startY = null;
+        if (Math.abs(dx) < 48 || Math.abs(dx) <= Math.abs(dy)) return;
+        var views = ["front", "side", "back"];
+        var index = views.indexOf(bodyView) + (dx < 0 ? 1 : -1);
+        if (index < 0 || index >= views.length) return;
+        event.preventDefault();
+        bodyView = views[index];
+        renderBody();
+      });
+      stage.addEventListener("pointercancel", function(){ startX = null; startY = null; });
+    }
     right.querySelectorAll("[data-bd-filter]").forEach(function(btn){
       btn.addEventListener("click", function(){
         bodyFilter = btn.getAttribute("data-bd-filter");
@@ -4116,6 +4324,46 @@
   }
 
   function bindBodyPanel(host){
+    var weeklyTarget = host.querySelector("[data-bd-weekly-target]");
+    if (weeklyTarget){
+      weeklyTarget.addEventListener("input", function(){
+        var target = Math.max(0, Math.min(50, Math.round(parseFloat(weeklyTarget.value) || 0)));
+        var rec = bodyMuscle(bodyMuscleId);
+        rec.weeklyTarget = target;
+        saveState();
+        var fill = host.querySelector("[data-bd-week-progress]");
+        var copy = host.querySelector("[data-bd-week-copy]");
+        if (fill) fill.style.width = (target ? Math.min(100, Math.round(bodyTrainingStats(bodyMuscleId).weeklySets / target * 100)) : 0) + "%";
+        if (copy){
+          var count = bodyTrainingStats(bodyMuscleId).weeklySets;
+          copy.textContent = target ? count + " / " + target + " sets this week" : "Set a target to track weekly progress";
+        }
+      });
+    }
+    var quickExercise = host.querySelector("[data-bd-quick-exercise]");
+    if (quickExercise){
+      quickExercise.addEventListener("change", function(){ bodyQuickLogExerciseId = quickExercise.value; });
+    }
+    var quickLog = host.querySelector("[data-bd-quick-log]");
+    if (quickLog){
+      quickLog.addEventListener("click", function(){
+        var found = findExerciseAnywhere(quickExercise ? quickExercise.value : bodyQuickLogExerciseId);
+        if (found) openDetail(found.cat.id, found.ex.id);
+      });
+    }
+    var addExercise = host.querySelector("[data-bd-add-exercise]");
+    if (addExercise){
+      addExercise.addEventListener("click", function(){
+        if (!state.categories.length){ openCategoryAdd(); return; }
+        var def = bodyMuscleById(bodyMuscleId);
+        activeCatId = state.categories[0].id;
+        mainTab = "library";
+        render();
+        openExerciseAdd(activeCatId);
+        pendingMuscleRows = [{ name:def ? def.name : "", percent:100 }];
+        renderMuscleRows();
+      });
+    }
     host.querySelectorAll("[data-bd-range]").forEach(function(el){
       el.addEventListener("input", function(){
         var id = el.getAttribute("data-bd-range");
@@ -4254,6 +4502,7 @@
           : "<button class='btn' id='chooseFolderBtn'>Choose folder</button>") +
         (backupDirHandle ? "<button class='btn ghost' id='forgetFolderBtn'>Remove</button>" : "") +
         "<button class='btn primary' id='setExportBtn'>Export backup now</button>" +
+        "<button class='btn' id='setImportBtn'>Import backup</button>" +
       "</div>" +
       "<div id='folderBackupList' style='margin-top:10px;'></div>";
     wrap.appendChild(bc);
@@ -4264,6 +4513,7 @@
     var forgetBtn = bc.querySelector("#forgetFolderBtn");
     if (forgetBtn) forgetBtn.addEventListener("click", forgetBackupFolder);
     bc.querySelector("#setExportBtn").addEventListener("click", exportBackup);
+    bc.querySelector("#setImportBtn").addEventListener("click", function(){ document.getElementById("importFile").click(); });
     main.appendChild(wrap);
     refreshFolderBackupList();
   }
