@@ -3393,13 +3393,22 @@
   // BUILD_ID is replaced with a unique id by build.mjs when the app is published
   // to dist/. It stays "dev" when this source file is opened directly, and the
   // update check then just reports that it can't compare builds.
-  var BUILD_ID = (typeof "iron-log-2026-10-02T10-31-53-muqtpsv8" !== "undefined") ? String("iron-log-2026-10-02T10-31-53-muqtpsv8") : "dev";
+  //
+  // Updates are automatic: every start (and every return to the app) the app
+  // compares dist/version.json with its own build id and asks the browser for
+  // the newest worker. A newer build means: save a backup, activate the new
+  // worker, reload into it. No uninstall, no clearing site data.
+  var BUILD_ID = (typeof "iron-log-2026-10-02T11-44-53-muqwborg" !== "undefined") ? String("iron-log-2026-10-02T11-44-53-muqwborg") : "dev";
   var APP_VERSION = "v10.0 — Body tab, offline + auto-update (" + BUILD_ID.slice(-8) + ")";
   var SW_CACHE_PREFIX = "iron-log-";
+  var UPDATE_ATTEMPTS = "iron-log-update-attempts";
+  var UPDATE_RELOADS = "iron-log-update-reloads";
+  var UPDATE_INTERVAL = 30 * 60 * 1000;   // re-check while the app stays open
   var backupDirHandle = null;
   var backupDirStatus = "boot"; // unsupported | unset | prompt | granted | denied
   var deferredInstallPrompt = null;
-  var appUpdateState = { checking: false, available: false, deployedVer: null };
+  var appUpdateState = { checking: false, available: false, deployedVer: null, lastChecked: 0, requested: false, lastController: null };
+  var updateTimer = null;
 
   function setUpdateStatus(msg){
     var el = document.getElementById("appUpdateStatus");
@@ -3432,80 +3441,120 @@
       return String(v);
     });
   }
-  // One tap: check version.json, and if a newer build exists, back up data and
-  // restart into it automatically. No reinstall, no "clear site data".
-  function checkForAppUpdate(){
-    if (appUpdateState.checking) return;
-    appUpdateState.checking = true;
-    appUpdateState.available = false;
-    refreshUpdateCard();
-    setUpdateStatus("Checking for updates… (needs internet)");
-    var done = false;
-    function finish(msg){
-      if (done) return;
-      done = true;
-      appUpdateState.checking = false;
-      refreshUpdateCard();
-      setUpdateStatus(msg);
-    }
-    if (typeof fetch === "undefined"){
-      finish("This browser can't check — but the app itself works offline. Use Save backup to protect your data.");
+  function sessionNum(key){
+    try { return parseInt(sessionStorage.getItem(key) || "0", 10) || 0; }
+    catch(e){ return 0; }
+  }
+  function bumpSession(key){
+    try { sessionStorage.setItem(key, String(sessionNum(key) + 1)); } catch(e){}
+  }
+  function resetSession(key){
+    try { sessionStorage.removeItem(key); } catch(e){}
+  }
+  // Reload into the new build, but only a couple of times per tab session. If
+  // reloading still doesn't land on the deployed build, something upstream is
+  // serving stale bytes; say so instead of bouncing the user forever.
+  function reloadIntoUpdate(){
+    if (sessionNum(UPDATE_RELOADS) >= 2){
+      setUpdateStatus("This device is still serving an old build after 2 tries — the host is likely caching sw.js. Close Iron Log fully, reopen it once, and it will pick up the new version.");
+      showToast("Close and reopen Iron Log to finish updating");
       return;
     }
-    // Ask the browser to fetch the newest sw.js in the background too.
-    try {
-      if ("serviceWorker" in navigator && navigator.serviceWorker.getRegistration){
-        navigator.serviceWorker.getRegistration().then(function(reg){
-          if (reg && reg.update) reg.update().catch(function(){});
-        }).catch(function(){});
-      }
-    } catch(e){}
-    var timer = setTimeout(function(){
-      finish("Couldn't reach the server — offline? The app itself works offline; updating needs internet.");
-    }, 15000);
-    fetchDeployedVersion().then(function(deployed){
-      clearTimeout(timer);
-      appUpdateState.deployedVer = deployed;
-      if (deployed && deployed !== BUILD_ID){
-        appUpdateState.available = true;
-        appUpdateState.checking = false;
-        done = true;
-        refreshUpdateCard();
-        setUpdateStatus("Update found (" + deployed.slice(-8) + ") — saving a backup and restarting…");
-        applyAppUpdate(true);
-        return;
-      }
-      finish("You're on the latest version. The app works offline.");
-    }).catch(function(){
-      clearTimeout(timer);
-      if (BUILD_ID === "dev"){
-        finish("This is an unbuilt copy (build id \"dev\"), so there's nothing to compare against. Run build.mjs to publish a copy with automatic updates; it works offline either way.");
-        return;
-      }
-      finish("Couldn't reach the server — offline, or this file wasn't opened from the installed/hosted app. The app itself works offline; updating needs internet. Use Save backup to protect your data.");
-    });
+    bumpSession(UPDATE_RELOADS);
+    bustReload();
   }
-  function waitForControllerChange(timeoutMs){
-    return new Promise(function(resolve){
-      if (!("serviceWorker" in navigator)){ resolve(); return; }
-      var settled = false;
-      function done(){ if (settled) return; settled = true; resolve(); }
-      var t = setTimeout(done, timeoutMs || 4000);
-      function onChange(){ clearTimeout(t); done(); }
-      try { navigator.serviceWorker.addEventListener("controllerchange", onChange); } catch(e){ done(); }
-    });
-  }
-  // Cache-bust so a stale HTTP-cached shell can never come back.
+// Cache-bust so a stale HTTP-cached shell can never come back.
   function bustReload(){
-    var sep = window.location.href.indexOf("?") === -1 ? "?" : "&";
     var base = window.location.href.split("#")[0];
-    try { window.location.replace(base + sep + "v=" + Date.now() + "#updated"); }
-    catch(e){ try { window.location.reload(); } catch(e2){} }
-    // Safety net in case replace() is blocked by the browser.
-    setTimeout(function(){ try { window.location.reload(); } catch(e){} }, 2500);
+    var sep = base.indexOf("?") === -1 ? "?" : "&";
+    var url = base + sep + "v=" + Date.now() + "#updated";
+    // No delayed reload() fallback: reload() reloads the *current* URL, so
+    // firing one while the cache-busted navigation is still in flight cancels
+    // it and lands the user straight back on the stale document.
+    try {
+      window.location.replace(url);
+      return;
+    } catch(e){}
+    try { window.location.href = url; return; } catch(e2){}
+    try { window.location.reload(); } catch(e3){}
   }
-  // Saves a JSON backup of app data first, then updates by dropping the old
-  // offline shell (unregister) and reloading fresh from the server.
+  // Resolves true only if the controlling worker actually changed. The old
+  // version resolved after a timeout regardless, so the code below it could
+  // never tell "updated" from "the update did nothing".
+  function waitForControllerChange(previous, timeoutMs){
+    return new Promise(function(resolve){
+      if (!("serviceWorker" in navigator)){ resolve(false); return; }
+      var settled = false;
+      function done(){ if (settled) return; settled = true; clearTimeout(timer); resolve(navigator.serviceWorker.controller !== previous); }
+      var timer = setTimeout(done, timeoutMs || 6000);
+      try {
+        navigator.serviceWorker.addEventListener("controllerchange", onChange);
+        function onChange(){ navigator.serviceWorker.removeEventListener("controllerchange", onChange); done(); }
+      } catch(e){ done(); }
+    });
+  }
+  // The page script runs before the injected register() call on window.load, so
+  // the very first check can find no registration at all. Wait briefly for the
+  // browser to report one rather than dropping straight into the wipe path.
+  function currentRegistration(){
+    return Promise.resolve(navigator.serviceWorker.getRegistration()).then(function(reg){
+      if (reg) return reg;
+      return new Promise(function(resolve){
+        var settled = false;
+        var timer = setTimeout(function(){ if (!settled){ settled = true; resolve(null); } }, 2000);
+        function give(reg2){ if (settled) return; settled = true; clearTimeout(timer); resolve(reg2 || null); }
+        try { navigator.serviceWorker.ready.then(give, function(){ give(null); }); }
+        catch(e){ give(null); }
+      });
+    });
+  }
+  // Fetch the newest sw.js right now, and make it the controller of this page.
+  function activateNewWorker(){
+    if (!("serviceWorker" in navigator) || !navigator.serviceWorker.getRegistration) return Promise.resolve(false);
+    return currentRegistration().then(function(reg){
+      if (!reg) return false;
+      var before = navigator.serviceWorker.controller;
+      // update() re-fetches sw.js; the registration is created with
+      // updateViaCache:'none' so this cannot be answered from the HTTP cache.
+      return Promise.resolve(reg.update ? reg.update() : null).catch(function(){})
+        .then(function(){ return waitForControllerChange(before, 6000); })
+        .then(function(changed){
+          if (changed) return true;
+          // update() returns once the check is done, not once the new worker
+          // has installed - poke it directly if it is still on its way.
+          var target = reg.waiting || reg.installing;
+          if (!target) return false;
+          try { target.postMessage({ type:"SKIP_WAITING" }); } catch(e){}
+          return waitForControllerChange(before, 6000);
+        });
+    }).catch(function(){ return false; });
+  }
+  // The last resort for a stale worker that never hands over: drop the worker
+  // and its caches, warm the HTTP cache with the fresh shell, reload. Only Cache
+  // Storage and the worker registration are touched - localStorage data (plans,
+  // workouts, body, posture) is never cleared.
+  function nukeShellAndReload(){
+    var wipe = (typeof caches !== "undefined" ? caches.keys().catch(function(){ return []; }) : Promise.resolve([]))
+      .then(function(keys){
+        return Promise.all(keys.filter(function(k){ return k.indexOf(SW_CACHE_PREFIX) === 0; })
+          .map(function(k){ return caches.delete(k).catch(function(){ return false; }); }));
+      }).catch(function(){});
+    return wipe
+      .then(function(){
+        return navigator.serviceWorker.getRegistration().then(function(reg){
+          return reg ? reg.unregister() : null;
+        }).catch(function(){});
+      })
+      .then(function(){
+        return fetch("./index.html?v=" + Date.now(), { cache: "reload" }).catch(function(){});
+      })
+      .then(function(){
+        return fetch("./version.json?v=" + Date.now(), { cache: "reload" }).catch(function(){});
+      })
+      .then(function(){ reloadIntoUpdate(); });
+  }
+  // Saves a JSON backup of app data first, then updates by activating the new
+  // worker and reloading into it.
   function downloadJsonBackup(filename){
     try {
       var blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
@@ -3522,81 +3571,120 @@
       return false;
     }
   }
-  function applyAppUpdate(auto){
+  // One tap (and on every automatic check): compare version.json, and if a newer
+  // build exists, back up the data and restart into it. No reinstall, no
+  // "clear site data".
+  function checkForAppUpdate(auto){
+    if (appUpdateState.checking) return;
+    // A previous attempt in this tab already failed to land on the new build.
+    // Retrying automatically would just reload in a loop.
+    if (auto && sessionNum(UPDATE_ATTEMPTS) >= 2) return;
+    // A raw copy of the source file is not an installed build, so it has no
+    // update story - comparing it against version.json would just reload in a loop.
+    if (!BUILD_ID || BUILD_ID === "dev") return;
+    appUpdateState.checking = true;
+    appUpdateState.available = false;
+    appUpdateState.lastChecked = Date.now();
+    refreshUpdateCard();
+    setUpdateStatus(auto ? "Checking for updates…" : "Checking for updates… (needs internet)");
+    var done = false;
+    function finish(msg){
+      if (done) return;
+      done = true;
+      appUpdateState.checking = false;
+      refreshUpdateCard();
+      if (msg) setUpdateStatus(msg);
+    }
+    if (typeof fetch === "undefined"){
+      finish("This browser can't check — but the app itself works offline. Use Save backup to protect your data.");
+      return;
+    }
+    var timer = setTimeout(function(){
+      finish("Couldn't reach the server — offline? The app itself works offline; updating needs internet.");
+    }, 15000);
+    fetchDeployedVersion().then(function(deployed){
+      clearTimeout(timer);
+      appUpdateState.deployedVer = deployed;
+      if (deployed && deployed !== BUILD_ID){
+        appUpdateState.available = true;
+        appUpdateState.checking = false;
+        done = true;
+        refreshUpdateCard();
+        setUpdateStatus("Update found (" + deployed.slice(-8) + ") — saving a backup and restarting…");
+        applyAppUpdate();
+        return;
+      }
+      // On the deployed build: clear the loop guards so the next update starts clean.
+      resetSession(UPDATE_ATTEMPTS);
+      resetSession(UPDATE_RELOADS);
+      finish("You're on the latest version. The app works offline.");
+    }).catch(function(){
+      clearTimeout(timer);
+      if (BUILD_ID === "dev"){
+        finish("This is an unbuilt copy (build id \"dev\"), so there's nothing to compare against. Run build.mjs to publish a copy with automatic updates; it works offline either way.");
+        return;
+      }
+      finish("Couldn't reach the server — offline, or this file wasn't opened from the installed/hosted app. The app itself works offline; updating needs internet. Use Save backup to protect your data.");
+    });
+  }
+  function applyAppUpdate(){
     // Save a JSON backup first, always. Best effort — never block the update.
     try { downloadJsonBackup("iron-log-pre-update-" + todayStr() + ".json"); } catch(e){}
+    appUpdateState.requested = true;
+    bumpSession(UPDATE_ATTEMPTS);
+    resetSession(UPDATE_RELOADS);
     showToast("Backup saved — updating app…");
     setUpdateStatus("Update found — backup saved" + (appUpdateState.deployedVer ? ", restarting on " + String(appUpdateState.deployedVer).slice(-8) : "") + "…");
-    // Clearing the session flag lets the controllerchange handler reload once
-    // into the new build instead of looping.
-    try { sessionStorage.removeItem("iron-log-updated-reload"); } catch(e){}
-
-    try {
-      if ("serviceWorker" in navigator && navigator.serviceWorker.getRegistration){
-        navigator.serviceWorker.getRegistration().then(function(reg){
-          function actAndReload(registration){
-            var fresh = registration;
-            return navigator.serviceWorker.getRegistration().then(function(r){ return r || fresh; })
-              .catch(function(){ return fresh; })
-              .then(function(r2){
-                var target = (r2 || registration).waiting || (r2 || registration).installing;
-                if (!target) return false;
-                try { target.postMessage("SKIP_WAITING"); } catch(e){}
-                try { (r2 || registration).waiting.postMessage({ type: "SKIP_WAITING" }); } catch(e){}
-                return waitForControllerChange(5000).then(function(){ return true; });
-              });
-          }
-          if (!reg){ setTimeout(bustReload, 600); return; }
-          if (reg.waiting){
-            // A new worker is already installed and waiting — just activate it.
-            actAndReload(reg).then(function(ok){ if (!ok) setTimeout(bustReload, 600); });
-            return;
-          }
-          // Force the browser to fetch the newest sw.js right now.
-          var p = (reg.update ? reg.update() : Promise.resolve()).catch(function(){});
-          p.then(function(){
-            return actAndReload(reg);
-          }).then(function(ok){
-            if (ok) { bustReload(); return; }
-            // No worker took over (e.g. an older cache-first worker still
-            // controls this page): wipe its stale caches, drop the worker, and
-            // warm the HTTP cache with the fresh shell before reloading.
-            // localStorage data is never touched.
-            try {
-              var ctrl = navigator.serviceWorker.controller;
-              if (ctrl) ctrl.postMessage({ type: "CLEAR_APP_CACHES" });
-            } catch(e){}
-            var wipe = (typeof caches !== "undefined" ? caches.keys().catch(function(){ return []; }) : Promise.resolve([]))
-              .then(function(keys){
-                return Promise.all(keys.filter(function(k){ return k.indexOf(SW_CACHE_PREFIX) === 0; })
-                  .map(function(k){ return caches.delete(k).catch(function(){ return false; }); }));
-              }).catch(function(){});
-            wipe.then(function(){
-              return fetch("./index.html?v=" + Date.now(), { cache: "reload" }).catch(function(){});
-            }).then(function(){
-              return fetch("./version.json?v=" + Date.now(), { cache: "reload" }).catch(function(){});
-            }).then(function(){
-              try { return reg.unregister(); } catch(e){}
-            }).catch(function(){}).then(function(){
-              // Online the next load is fresh from the network; offline the
-              // browser cache still has the old shell so the app keeps working.
-              bustReload();
-            });
-          });
-        }).catch(function(){ setTimeout(bustReload, 600); });
-      } else { setTimeout(bustReload, 600); }
-    } catch(e){ setTimeout(bustReload, 600); }
+    activateNewWorker().then(function(ok){
+      if (ok){ reloadIntoUpdate(); return; }
+      return nukeShellAndReload();
+    });
+  }
+  // Automatic check: on start, whenever the app comes back to the foreground,
+  // when the connection comes back, and every 30 minutes while it stays open.
+  function autoCheckForUpdates(){
+    if (Date.now() - appUpdateState.lastChecked < 60000) return;
+    checkForAppUpdate(true);
+  }
+  function scheduleUpdateChecks(){
+    if (updateTimer) clearInterval(updateTimer);
+    updateTimer = setInterval(autoCheckForUpdates, UPDATE_INTERVAL);
+    document.addEventListener("visibilitychange", function(){
+      if (!document.hidden) autoCheckForUpdates();
+    });
+    window.addEventListener("online", autoCheckForUpdates);
   }
   if ("serviceWorker" in navigator){
-    // Reload once when a NEW worker takes control (a real update). Guarded by a
-    // session flag so the very first install can't cause a reload loop.
-    var _updateReloaded = false;
-    try { if (sessionStorage.getItem("iron-log-updated-reload")) _updateReloaded = true; } catch(e){}
+    // A worker the browser fetched on its own sits in `waiting` forever unless
+    // something activates it. Do it here, so a published build is picked up
+    // without closing the tab - and without touching site data.
+    if (navigator.serviceWorker.ready && navigator.serviceWorker.ready.then){
+      navigator.serviceWorker.ready.then(function(reg){
+        if (!reg || !reg.addEventListener) return;
+        reg.addEventListener("updatefound", function(){
+          var sw = reg.installing;
+          if (!sw) return;
+          sw.addEventListener("statechange", function(){
+            // Only when an older worker already controls the page, otherwise
+            // this is the very first install and a reload would be pointless.
+            if (sw.state === "installed" && navigator.serviceWorker.controller){
+              try { sw.postMessage({ type:"SKIP_WAITING" }); } catch(e){}
+            }
+          });
+        });
+      }).catch(function(){});
+    }
+    // A new worker took over this page: reload once into the build it serves.
+    // bustReload (not reload) so the HTTP cache cannot hand back the old
+    // document - that was the "only a reinstall fixes it" symptom.
+    appUpdateState.lastController = navigator.serviceWorker.controller;
     navigator.serviceWorker.addEventListener("controllerchange", function(){
-      if (_updateReloaded) return;
-      _updateReloaded = true;
-      try { sessionStorage.setItem("iron-log-updated-reload", "1"); } catch(e){}
-      window.location.reload();
+      var before = appUpdateState.lastController;
+      appUpdateState.lastController = navigator.serviceWorker.controller;
+      // First install: clients.claim() fires this with no previous controller.
+      // Bouncing the user on their very first visit would be pointless.
+      if (!before && !appUpdateState.requested) return;
+      reloadIntoUpdate();
     });
   }
 
@@ -4632,16 +4720,16 @@
     var up = document.createElement("div");
     up.className = "set-card";
     up.innerHTML = "<h3>Update app</h3>" +
-      "<div class='d'>Iron Log works fully offline and updates itself. Tap <b>Check for updates</b>: if a newer version is published, a JSON backup of your data is saved automatically and the app restarts into the new version — no reinstall, and your data is never touched.</div>" +
+      "<div class='d'>Iron Log updates itself — you never need to uninstall it or clear browser data. Every time you open the app it checks for a newer build; if one exists, a JSON backup of your data is saved automatically and the app restarts into the new version. Tap <b>Check for updates</b> to do it right now instead of waiting.</div>" +
       "<div class='set-rowline'><span class='folder-pill' id='appVersionPill'>Version: " + esc(APP_VERSION) + "</span></div>" +
       "<div class='set-rowline' style='margin-top:8px;'>" +
-        "<button class='btn primary' id='checkUpdateBtn'>Check for updates</button>" +
-        "<button class='btn primary' id='applyUpdateBtn' style='display:none;'>Save backup &amp; restart</button>" +
-        "<button class='btn' id='backupNowBtn'>Save backup</button>" +
+        '<button class="btn primary" id="checkUpdateBtn">Check for updates</button>' +
+        '<button class="btn primary" id="applyUpdateBtn" style="display:none;">Save backup &amp; restart</button>' +
+        '<button class="btn" id="backupNowBtn">Save backup</button>' +
       "</div>" +
       "<div class='d' id='appUpdateStatus' style='margin-top:8px;'>Idle.</div>";
     wrap.appendChild(up);
-    up.querySelector("#checkUpdateBtn").addEventListener("click", checkForAppUpdate);
+    up.querySelector("#checkUpdateBtn").addEventListener("click", function(){ checkForAppUpdate(false); });
     up.querySelector("#applyUpdateBtn").addEventListener("click", applyAppUpdate);
     up.querySelector("#backupNowBtn").addEventListener("click", exportBackup);
     refreshUpdateCard();
@@ -4892,12 +4980,20 @@
   // ---------- init ----------
   render();
   refreshBackupDir().then(function(){ if (mainTab === "settings") render(); });
+  // Updates run on their own: once now, then on every return to the app, on
+  // reconnect and every 30 minutes. Waiting for the browser to notice a new
+  // worker (or for the user to tap the button) is what left installs stuck on
+  // an old build.
+  scheduleUpdateChecks();
+  autoCheckForUpdates();
 })();
 </script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('./sw.js').catch(function () {});
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+      .then(function (reg) { window.__ironLogSW = reg; })
+      .catch(function () {});
   });
 }
 </script>
