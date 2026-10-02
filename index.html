@@ -550,7 +550,7 @@
   .week-day.today { border-color: var(--accent); border-width: 1.5px; }
   .set-card { border: 1px solid var(--border); background: var(--surface); border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; box-shadow: var(--shadow); }
   .set-card h3 { font-size: 15px; margin: 0 0 4px; font-family: 'Oswald', system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.02em; }
-  .set-card .d { font-size: 12.5px; color: var(--text-dim); line-height: 1.5; margin-bottom: 10px; }
+  .set-card .d { font-size: 12.5px; color: var(--text-dim); line-height: 1.5; margin-bottom: 10px; overflow-wrap: anywhere; }
   .set-rowline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .folder-pill { font-size: 12.5px; font-weight: 700; background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .backup-row { display: flex; gap: 8px; align-items: center; border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; }
@@ -579,15 +579,14 @@
   .bd-detail { fill: none; stroke: var(--surface); stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
   .bd-muscle { fill: var(--bd-untrained); stroke: var(--bd-outline); stroke-width: 1.35; stroke-linejoin: round; cursor: pointer; transition: fill .15s ease, stroke .15s ease; }
   .bd-muscle:hover { fill: var(--text-dim); }
-  .bd-muscle.rated { fill: var(--bd-rated); }
-  .bd-muscle.hi { fill: var(--bd-worked); stroke: var(--bd-worked); }
+  .bd-muscle.worked { fill: var(--bd-rated); }
+  .bd-muscle.focus { fill: var(--bd-worked); stroke: var(--bd-worked); }
   .bd-muscle.sel { stroke: #FFFFFF; stroke-width: 2.8; filter: drop-shadow(0 0 3px rgba(255,255,255,.72)); }
   .bd-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11.5px; color: var(--text-dim); margin-top: 10px; }
   .bd-legend b { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
-  .bd-legend .k-unrated { background: var(--border); }
-  .bd-legend .k-unrated { background: var(--bd-untrained); }
-  .bd-legend .k-rated { background: var(--bd-rated); }
-  .bd-legend .k-hi { background: var(--bd-worked); }
+  .bd-legend .k-rest { background: var(--bd-untrained); }
+  .bd-legend .k-worked { background: var(--bd-rated); }
+  .bd-legend .k-focus { background: var(--bd-worked); }
   .bd-legend .k-sel { background: var(--surface-2); box-shadow: inset 0 0 0 2px var(--text); }
 
   .bd-stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
@@ -596,19 +595,17 @@
   .bd-stat .val { font-family: 'Oswald', system-ui, sans-serif; font-size: 22px; line-height: 1.15; margin-top: 2px; }
   .bd-stat .val small { font-size: 12px; color: var(--text-dim); font-family: inherit; }
 
-  .bd-meter { margin-bottom: 12px; }
-  .bd-meter .mrow { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
-  .bd-meter .mname { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); }
-  .bd-meter .mval { font-family: 'Oswald', system-ui, sans-serif; font-size: 16px; }
   input[type=range].bd-range {
     -webkit-appearance: none;
     appearance: none;
     width: 100%;
+    min-width: 0;
     padding: 0;
     border: 0;
     background: transparent;
     height: 24px;
     cursor: pointer;
+    touch-action: pan-y;
   }
   input[type=range].bd-range::-webkit-slider-runnable-track { height: 6px; border-radius: 4px; background: var(--surface-2); }
   input[type=range].bd-range::-webkit-slider-thumb {
@@ -646,6 +643,7 @@
   }
   .bd-swatch.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
   .bd-swatch.hi { background: var(--good); border-color: var(--good); color: #fff; }
+  .bd-swatch.rest { background: var(--surface-2); }
 
   .bd-list { display: flex; flex-direction: column; gap: 4px; }
   .bd-list-row {
@@ -668,10 +666,22 @@
   .bd-list-row .minibar > div { height: 100%; background: var(--accent); }
   .bd-list-row .pct { flex: none; min-width: 30px; text-align: right; font-family: 'Oswald', system-ui, sans-serif; font-size: 15px; }
 
-  .bd-posture-row { display: flex; gap: 10px; align-items: center; border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; }
+  /* Grid, not flex: the name and the slider can never push past the card edge,
+     so nothing spills out of the Posture Fix box on narrow screens. */
+  .bd-posture-row {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr) 46px;
+    align-items: center;
+    gap: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+  }
   .bd-posture-row.on { border-color: var(--accent); }
-  .bd-posture-row .pn { flex: 1; min-width: 118px; font-size: 13px; font-weight: 600; }
-  .bd-posture-row .pctv { flex: none; min-width: 42px; text-align: right; font-family: 'Oswald', system-ui, sans-serif; font-size: 16px; }
+  .bd-posture-row .pn { min-width: 0; font-size: 13px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+  .bd-posture-row .bd-range { grid-column: 1 / -1; width: 100%; min-width: 0; margin: 0; }
+  .bd-posture-row .pctv { text-align: right; font-family: 'Oswald', system-ui, sans-serif; font-size: 16px; }
 
   .bd-overview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
   .bd-overview-item { min-width: 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
@@ -680,14 +690,44 @@
   .bd-overview-item .hint { margin-top: 2px; color: var(--text-dim); font-size: 11px; }
   .bd-overview-item.recovering .val { color: var(--accent); }
   .bd-overview-item.recovered .val { color: var(--good); }
-  .bd-target-row { display: grid; grid-template-columns: minmax(0, 1fr) 96px; align-items: center; gap: 8px; margin: 8px 0 12px; }
+  .bd-target-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; margin: 10px 0 12px; }
   .bd-target-row label { color: var(--text-dim); font-size: 12px; font-weight: 600; }
-  .bd-target-row input { padding: 7px 9px; }
+  .bd-target-row .val { font-family: 'Oswald', system-ui, sans-serif; font-size: 17px; text-align: right; white-space: nowrap; }
+  .bd-target-row .val small { font-size: 11px; color: var(--text-dim); }
   .bd-week-progress { height: 8px; overflow: hidden; border-radius: 999px; background: var(--surface-2); }
   .bd-week-progress div { height: 100%; border-radius: inherit; background: var(--accent); transition: width .2s ease; }
+  .bd-week-progress.done div { background: var(--good); }
   .bd-quick-log { display: flex; gap: 8px; align-items: center; margin: 12px 0; }
   .bd-quick-log select { min-width: 0; flex: 1; }
   .bd-quick-log .btn { flex: none; }
+
+  /* bullet-point notes */
+  .bd-notes { margin: 10px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; }
+  .bd-notes li { font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+  .bd-notes li::marker { color: var(--accent); }
+  .bd-notes.empty-note { padding-left: 0; list-style: none; color: var(--text-dim); font-size: 12.5px; }
+
+  /* focus muscles section */
+  .bd-focus-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+  .bd-focus-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    background: var(--surface-2);
+    padding: 11px 12px;
+  }
+  .bd-focus-card .fc-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+  .bd-focus-card .fc-name { font-family: 'Oswald', system-ui, sans-serif; font-size: 15px; font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+  .bd-focus-card .fc-vol { font-size: 12px; color: var(--text-dim); overflow-wrap: anywhere; }
+  .bd-focus-card .fc-vol b { color: var(--text); font-family: 'Oswald', system-ui, sans-serif; font-size: 15px; }
+  .bd-focus-card .bd-week-progress { margin-top: -2px; }
+  .bd-focus-card .bd-notes { margin-top: 0; }
+  .bd-focus-card .fc-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; padding-top: 2px; }
+  .bd-focus-card .fc-actions .btn { flex: 1 1 auto; min-width: 0; }
+  .bd-focus-add { align-self: flex-start; }
 
   .empty {
     padding: 60px 20px;
@@ -3353,7 +3393,7 @@
   // BUILD_ID is replaced with a unique id by build.mjs when the app is published
   // to dist/. It stays "dev" when this source file is opened directly, and the
   // update check then just reports that it can't compare builds.
-  var BUILD_ID = (typeof "iron-log-2026-10-02T09-00-03-muqqfp8s" !== "undefined") ? String("iron-log-2026-10-02T09-00-03-muqqfp8s") : "dev";
+  var BUILD_ID = (typeof "iron-log-2026-10-02T10-31-53-muqtpsv8" !== "undefined") ? String("iron-log-2026-10-02T10-31-53-muqtpsv8") : "dev";
   var APP_VERSION = "v10.0 — Body tab, offline + auto-update (" + BUILD_ID.slice(-8) + ")";
   var SW_CACHE_PREFIX = "iron-log-";
   var backupDirHandle = null;
@@ -3712,8 +3752,8 @@
   });
 
   // ==================== BODY ====================
-  // Manual muscle ratings + posture status. Everything lives in state.body so
-  // it rides along with the normal JSON export/import.
+  // Focus muscles + posture status. Everything lives in state.body so it rides
+  // along with the normal JSON export/import.
 
   var BODY_MUSCLES = [
     { id:"pecs",        name:"Chest",          region:"Chest" },
@@ -3749,7 +3789,7 @@
 
   var bodyView = "front";      // front | side | back
   var bodyMuscleId = null;     // selected muscle
-  var bodyFilter = "off";      // off | rated | highlight
+  var bodyFilter = "all";      // all | trained | focus
   var bodySearch = "";
   var bodyQuickLogExerciseId = "";
 
@@ -3795,15 +3835,22 @@
   }
   function bodyMuscle(id){
     var s = bodyStore();
-    if (!s.muscles[id]) s.muscles[id] = { rate:0, efficiency:0, shape:0, highlight:false, note:"", weeklyTarget:0 };
+    if (!s.muscles[id]) s.muscles[id] = { focus:false, note:"" };
     var r = s.muscles[id];
-    r.rate = clampPct(r.rate);
-    r.efficiency = clampPct(r.efficiency);
-    r.shape = clampPct(r.shape);
-    r.highlight = !!r.highlight;
+    // Old saves stored the focus flag as `highlight` next to a set of 0-100
+    // ratings. The flag is carried over once and the ratings are dropped -
+    // weekly volume replaced them.
+    if (typeof r.focus !== "boolean") r.focus = !!r.highlight;
+    delete r.highlight;
+    delete r.rate;
+    delete r.efficiency;
+    delete r.shape;
+    delete r.weeklyTarget;
     if (typeof r.note !== "string") r.note = "";
-    r.weeklyTarget = Math.max(0, Math.min(50, Math.round(parseFloat(r.weeklyTarget) || 0)));
     return r;
+  }
+  function bodyFocusMuscles(){
+    return bodyAllRecords().filter(function(x){ return x.rec.focus; });
   }
   function bodyAllRecords(){
     return BODY_MUSCLES.map(function(d){ return { def:d, rec:bodyMuscle(d.id) }; });
@@ -3832,12 +3879,15 @@
   }
   function bodyMuscleStats(){
     var all = bodyAllRecords();
-    var rated = all.filter(function(x){ return x.rec.rate > 0; });
-    var hi = all.filter(function(x){ return x.rec.highlight; });
-    var avg = rated.length
-      ? Math.round(rated.reduce(function(sum,x){ return sum + x.rec.rate; }, 0) / rated.length)
-      : 0;
-    return { rated:rated.length, total:all.length, hi:hi.length, avg:avg };
+    var focus = all.filter(function(x){ return x.rec.focus; });
+    var trained = 0;
+    var sets = 0;
+    all.forEach(function(x){
+      var weekly = bodyTrainingStats(x.def.id).weeklySets;
+      if (weekly > 0) trained++;
+      sets += weekly;
+    });
+    return { total:all.length, focus:focus.length, trained:trained, sets:sets };
   }
 
   function normalizedMuscleTarget(name){
@@ -3860,11 +3910,28 @@
     });
     return matches;
   }
+  function bodyMonday(dateStr){
+    // Monday of the week containing a UTC yyyy-mm-dd string.
+    var d = new Date(dateStr + "T00:00:00Z");
+    d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+    return d;
+  }
+  function bodyWeekStart(offsetWeeks){
+    // Monday of the current week, walked back offsetWeeks*7 days. Log dates are
+    // UTC yyyy-mm-dd strings (todayStr()), so the boundary is computed in UTC
+    // too - a local midnight here would shift the week by a day.
+    var d = bodyMonday(todayStr());
+    d.setUTCDate(d.getUTCDate() - (offsetWeeks || 0) * 7);
+    return d.toISOString().slice(0, 10);
+  }
   function bodyTrainingStats(id){
     var today = todayStr();
-    var weekStart = new Date();
-    weekStart.setDate(weekStart.getDate() - 6);
-    var from = weekStart.toISOString().slice(0, 10);
+    var from = bodyWeekStart(0);
+    var weekCount = 6;
+    var weekFrom = bodyWeekStart(weekCount - 1);
+    // Sets per week, oldest first. The last bucket is the week in progress.
+    var weeks = [];
+    for (var i = 0; i < weekCount; i++) weeks.push(0);
     var weeklySets = 0;
     var lastDate = "";
     state.categories.forEach(function(cat){
@@ -3873,8 +3940,15 @@
         (ex.logs || []).forEach(function(log){
           var date = String(log.date || "").slice(0, 10);
           if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > today) return;
-          if (date >= from) weeklySets += Array.isArray(log.sets) ? log.sets.length : 0;
           if (date > lastDate) lastDate = date;
+          if (date < weekFrom) return;
+          var count = Array.isArray(log.sets) ? log.sets.length : 0;
+          if (!count) return;
+          // Whole weeks between that log's Monday and this week's Monday.
+          var age = Math.round((Date.parse(from + "T00:00:00Z") - bodyMonday(date).getTime()) / 604800000);
+          if (age < 0 || age >= weekCount) return;
+          weeks[weekCount - 1 - age] += count;
+          if (age === 0) weeklySets += count;
         });
       });
     });
@@ -3882,17 +3956,38 @@
     if (lastDate){
       daysSince = Math.floor((new Date(today + "T00:00:00") - new Date(lastDate + "T00:00:00")) / 86400000);
     }
-    return { weeklySets:weeklySets, lastDate:lastDate, daysSince:daysSince };
+    return { weeklySets:weeklySets, weeks:weeks, lastDate:lastDate, daysSince:daysSince };
+  }
+  // Weekly volume target is never typed in - it is assigned from the muscle's
+  // own weekly progress: the best of its last 4 finished weeks, so the bar
+  // always compares this week against what the muscle has actually managed.
+  function bodyWeeklyPlan(id){
+    var training = bodyTrainingStats(id);
+    var done = training.weeks.slice(0, training.weeks.length - 1).filter(function(n){ return n > 0; });
+    var target = 0;
+    if (done.length) target = Math.max.apply(null, done);
+    else if (training.weeklySets > 0) target = training.weeklySets;
+    target = Math.max(1, Math.min(40, Math.round(target)));
+    var percent = target ? Math.min(100, Math.round(training.weeklySets / target * 100)) : 0;
+    return {
+      target:training.weeklySets || done.length ? target : 0,
+      weeklySets:training.weeklySets,
+      percent:percent,
+      done:target > 0 && training.weeklySets >= target,
+      basis:done.length
+        ? "Best of your last " + done.length + " full week" + (done.length > 1 ? "s" : "")
+        : "From the sets logged so far this week"
+    };
   }
 
   // ---- figure geometry (stylised mannequin; each muscle is a click group) ----
   function bdMus(id, inner){
-    // Bake the rating state in, so a fresh render (tab switch, view switch)
-    // always shows the colours - not just after a live sync.
+    // Bake the state in, so a fresh render (tab switch, view switch) always
+    // shows the colours - not just after a live sync.
     var rec = bodyMuscle(id);
     var cls = "bd-muscle";
-    if (rec.rate > 0) cls += " rated";
-    if (rec.highlight) cls += " hi";
+    if (bodyTrainingStats(id).weeklySets > 0) cls += " worked";
+    if (rec.focus) cls += " focus";
     if (id === bodyMuscleId) cls += " sel";
     var def = bodyMuscleById(id);
     return '<g class="' + cls + '" data-muscle="' + id + '" role="button" tabindex="0" aria-label="' + esc(def ? def.name : id) + '" aria-pressed="' + (id === bodyMuscleId ? 'true' : 'false') + '">' + inner + '</g>';
@@ -4031,40 +4126,124 @@
   }
 
   // ---- panel builders ----
-  function bodyMeterRow(id, key, label){
-    var v = bodyMuscle(id)[key];
-    return '<div class="bd-meter">' +
-      '<div class="mrow"><span class="mname">' + label + '</span>' +
-      '<span class="mval" data-bd-out="' + id + '-' + key + '">' + v + '</span></div>' +
-      '<input type="range" class="bd-range" min="0" max="100" step="1" value="' + v + '" ' +
-      'data-bd-range="' + id + '" data-bd-key="' + key + '" aria-label="' + esc(label) + '">' +
-    '</div>';
+  // One note per line = one bullet point.
+  function bodyNoteItems(note){
+    return String(note || "").split(/\r?\n/).map(function(line){ return line.trim(); }).filter(Boolean);
+  }
+  function bodyNotesHTML(note, emptyText){
+    var items = bodyNoteItems(note);
+    if (!items.length){
+      return '<ul class="bd-notes empty-note"><li>' + esc(emptyText || "No notes yet — add one bullet per line.") + "</li></ul>";
+    }
+    return '<ul class="bd-notes">' + items.map(function(t){ return "<li>" + esc(t) + "</li>"; }).join("") + "</ul>";
+  }
+  // A range jumps to whatever you click on the track, so a stray tap rewrites
+  // the value. Only a press that actually lands on the thumb is allowed
+  // through; everything else keeps the current value.
+  function lockRange(el){
+    if (!el || el.dataset.bdLocked === "1") return;
+    el.dataset.bdLocked = "1";
+    var onThumb = function(clientX){
+      var min = parseFloat(el.min);
+      var max = parseFloat(el.max);
+      if (!isFinite(min) || !isFinite(max) || max <= min) return true;
+      var rect = el.getBoundingClientRect();
+      if (rect.width < 24) return true;
+      var thumb = el.offsetHeight || 20;
+      var span = rect.width - thumb;
+      var ratio = (parseFloat(el.value) - min) / (max - min);
+      var center = rect.left + thumb / 2 + ratio * span;
+      return Math.abs(clientX - center) <= thumb / 2 + 2;
+    };
+    var block = function(e){
+      var keep = el.value;
+      el.value = keep;
+      el.dataset.bdBlock = keep;
+      if (e.cancelable) e.preventDefault();
+    };
+    var release = function(){
+      delete el.dataset.bdBlock;
+    };
+    el.addEventListener("pointerdown", function(e){
+      if (e.button !== undefined && e.button !== 0) return;
+      if (onThumb(e.clientX)) return;
+      block(e);
+    });
+    // Older engines without PointerEvent still get the guard from mouse.
+    el.addEventListener("mousedown", function(e){ if (!window.PointerEvent) block(e); });
+    el.addEventListener("input", function(){
+      if (!el.dataset.bdBlock) return;
+      // Browsers that ignored preventDefault still moved the thumb - undo it.
+      if (el.value !== el.dataset.bdBlock) el.value = el.dataset.bdBlock;
+    });
+    ["pointerup","pointercancel","mouseup","blur","keyup"].forEach(function(type){
+      el.addEventListener(type, release);
+    });
+  }
+  function bodyVolumeBlock(plan){
+    if (!plan.target){
+      return "<div class='bd-target-row'><label>Weekly volume</label><span class='val'>—</span></div>" +
+        "<div class='bd-week-progress'><div style='width:0%'></div></div>" +
+        "<div class='d'>Log sets for this muscle and the weekly target is assigned automatically.</div>";
+    }
+    return "<div class='bd-target-row'><label>Weekly volume · auto-assigned</label>" +
+        "<span class='val'>" + plan.target + " <small>sets target</small></span></div>" +
+      "<div class='bd-week-progress" + (plan.done ? " done" : "") + "'><div style='width:" + plan.percent + "%'></div></div>" +
+      "<div class='d'>" + plan.weeklySets + " / " + plan.target + " sets this week · " + esc(plan.basis) + ".</div>";
   }
   function bodyListRows(){
     var q = bodySearch.trim().toLowerCase();
     var rows = bodyAllRecords().filter(function(x){
-      var rec = x.rec;
-      if (bodyFilter === "rated" && !(rec.rate > 0)) return false;
-      if (bodyFilter === "highlight" && !rec.highlight) return false;
+      var weekly = bodyTrainingStats(x.def.id).weeklySets;
+      if (bodyFilter === "trained" && !(weekly > 0)) return false;
+      if (bodyFilter === "focus" && !x.rec.focus) return false;
       if (!q) return true;
       return x.def.name.toLowerCase().indexOf(q) !== -1 || x.def.region.toLowerCase().indexOf(q) !== -1;
     });
     rows.sort(function(a,b){
-      if (b.rec.rate !== a.rec.rate) return b.rec.rate - a.rec.rate;
+      if (a.rec.focus !== b.rec.focus) return a.rec.focus ? -1 : 1;
+      var av = bodyTrainingStats(a.def.id).weeklySets;
+      var bv = bodyTrainingStats(b.def.id).weeklySets;
+      if (bv !== av) return bv - av;
       if (a.def.region !== b.def.region) return a.def.region < b.def.region ? -1 : 1;
       return a.def.name.localeCompare(b.def.name);
     });
     if (!rows.length) return '<div class="d" style="margin:0">No muscles match that filter.</div>';
     return rows.map(function(x){
-      var rec = x.rec;
-      var mark = rec.highlight ? "★" : (rec.rate > 0 ? "•" : "·");
-      var cls = rec.highlight ? " hi" : (rec.rate > 0 ? " on" : "");
+      var training = bodyTrainingStats(x.def.id);
+      var plan = bodyWeeklyPlan(x.def.id);
+      var mark = x.rec.focus ? "★" : (training.weeklySets > 0 ? "•" : "·");
+      var cls = x.rec.focus ? " hi" : (training.weeklySets > 0 ? " on" : "");
       return '<button type="button" class="bd-list-row' + (x.def.id === bodyMuscleId ? " sel" : "") + '" data-bd-pick="' + x.def.id + '">' +
         '<span class="bd-swatch' + cls + '" aria-hidden="true">' + mark + '</span>' +
         '<span class="nm">' + esc(x.def.name) + '<div class="rg">' + esc(x.def.region) + '</div></span>' +
-        '<span class="minibar"><div style="width:' + rec.rate + '%"></div></span>' +
-        '<span class="pct">' + rec.rate + '</span>' +
+        '<span class="minibar"><div style="width:' + plan.percent + '%"></div></span>' +
+        '<span class="pct">' + training.weeklySets + '</span>' +
       '</button>';
+    }).join("");
+  }
+  function bodyFocusCards(){
+    var focus = bodyFocusMuscles();
+    if (!focus.length){
+      return "<div class='d' style='margin:0'>No focus muscles yet. Open a muscle and tap <b>Focus muscle</b> — " +
+        "focus muscles show up here with their notes and this week's volume.</div>";
+    }
+    return focus.map(function(x){
+      var training = bodyTrainingStats(x.def.id);
+      var plan = bodyWeeklyPlan(x.def.id);
+      return '<div class="bd-focus-card" data-bd-focus-card="' + x.def.id + '">' +
+        '<div class="fc-top"><span class="bd-swatch hi" aria-hidden="true">★</span>' +
+          '<span class="fc-name">' + esc(x.def.name) + '</span>' +
+          '<span class="tag">' + esc(x.def.region) + "</span></div>" +
+        '<div class="fc-vol"><b>' + training.weeklySets + "</b> sets this week" +
+          (plan.target ? " · target " + plan.target : " · no target yet") + "</div>" +
+        '<div class="bd-week-progress' + (plan.done ? " done" : "") + '"><div style="width:' + plan.percent + '%"></div></div>' +
+        bodyNotesHTML(x.rec.note, "No notes yet.") +
+        '<div class="fc-actions">' +
+          '<button type="button" class="btn small" data-bd-focus-open="' + x.def.id + '">Open</button>' +
+          '<button type="button" class="btn small ghost" data-bd-focus-drop="' + x.def.id + '">Remove focus</button>' +
+        "</div>" +
+      "</div>";
     }).join("");
   }
   function bodyPostureRows(){
@@ -4074,9 +4253,9 @@
         '<button type="button" class="bd-swatch' + (rec.percent > 0 ? " on" : "") + '" data-bd-ptoggle="' + bodyPostureId(name) + '" ' +
         'aria-label="Toggle ' + esc(name) + '" title="Mark ' + esc(name) + ' as present / clear it">' + (rec.percent > 0 ? "✓" : "+") + '</button>' +
         '<span class="pn">' + esc(name) + '</span>' +
-        '<input type="range" class="bd-range" style="flex:1;min-width:104px" min="0" max="100" step="1" value="' + rec.percent + '" ' +
-        'data-bd-prange="' + bodyPostureId(name) + '" aria-label="' + esc(name) + ' severity">' +
         '<span class="pctv" data-bd-pout="' + bodyPostureId(name) + '">' + rec.percent + '%</span>' +
+        '<input type="range" class="bd-range" min="0" max="100" step="1" value="' + rec.percent + '" ' +
+        'data-bd-prange="' + bodyPostureId(name) + '" aria-label="' + esc(name) + ' severity">' +
       '</div>';
     }).join("");
   }
@@ -4085,17 +4264,24 @@
   function renderBody(){
     var main = document.getElementById("mainArea");
     main.innerHTML = "";
+
+    // Focus section sits above everything else.
+    var focus = document.createElement("div");
+    focus.className = "set-card";
+    focus.id = "bdFocus";
+    main.appendChild(focus);
+
     var layout = document.createElement("div");
     layout.className = "body-layout";
 
     var left = document.createElement("div");
     left.className = "set-card";
     left.innerHTML = "<h3>All muscles</h3>" +
-      "<div class='d'>Track every muscle and keep focus on the areas you need most.</div>" +
+      "<div class='d'>Track every muscle, keep focus on the areas you need most, and watch weekly volume.</div>" +
       "<input type='search' id='bdSearch' placeholder='Search muscles…' value='" + esc(bodySearch) + "' style='margin-bottom:10px'>" +
       "<div class='bd-viewbar' style='margin-bottom:10px'>" +
-        [["off","All"],["rated","Rated"],["highlight","Highlighted"]].map(function(f){
-          return '<button type="button" class="chip' + (bodyFilter === f[0] ? " selected" : "") + '" data-bd-filter="' + f[0] + '">' + f[1] + '</button>';
+        [["all","All"],["trained","Trained this week"],["focus","Focused"]].map(function(f){
+          return '<button type="button" class="chip' + (bodyFilter === f[0] ? " selected" : "") + '" data-bd-filter="' + f[0] + '">' + f[1] + "</button>";
         }).join("") +
       "</div>" +
       '<div class="bd-list" id="bdList"></div>';
@@ -4105,8 +4291,8 @@
 
     var stats = document.createElement("div");
     stats.className = "set-card";
-    stats.innerHTML = "<h3>Muscle overview</h3>" +
-      "<div class='d'>Review the total muscle count, average rating, and highlighted areas.</div>" +
+    stats.innerHTML = "<h3>Weekly volume overview</h3>" +
+      "<div class='d'>Every number comes from the sets you logged. Targets are assigned for you from your weekly progress.</div>" +
       '<div class="bd-stat-row" id="bdStats"></div>';
     right.appendChild(stats);
 
@@ -4123,6 +4309,7 @@
     layout.appendChild(right);
     main.appendChild(layout);
 
+    syncBodyFocus();
     syncBodyStats();
     syncBodyPanel();
     syncBodyList();
@@ -4130,15 +4317,39 @@
     bindBody(left, right);
   }
 
+  function syncBodyFocus(){
+    var host = document.getElementById("bdFocus");
+    if (!host) return;
+    host.innerHTML = "<h3>Focus muscles</h3>" +
+      "<div class='d'>The muscles you are prioritising, with their notes and how much volume they have this week.</div>" +
+      '<div class="bd-focus-grid" id="bdFocusGrid">' + bodyFocusCards() + "</div>";
+    host.querySelectorAll("[data-bd-focus-open]").forEach(function(btn){
+      btn.addEventListener("click", function(){ selectBodyMuscle(btn.getAttribute("data-bd-focus-open")); });
+    });
+    host.querySelectorAll("[data-bd-focus-drop]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var id = btn.getAttribute("data-bd-focus-drop");
+        bodyMuscle(id).focus = false;
+        saveState();
+        syncBodyFocus();
+        syncBodyStats();
+        syncBodyPanel();
+        syncBodyList();
+        syncBodyFigure();
+        showToast("Removed from focus");
+      });
+    });
+  }
+
   function syncBodyStats(){
     var host = document.getElementById("bdStats");
     if (!host) return;
     var s = bodyMuscleStats();
     host.innerHTML =
-      "<div class='bd-stat'><div class='lbl'>Rated</div><div class='val'>" + s.rated + "<small>/" + s.total + "</small></div></div>" +
-      "<div class='bd-stat'><div class='lbl'>Avg rate</div><div class='val'>" + s.avg + "</div></div>" +
-      "<div class='bd-stat'><div class='lbl'>Highlighted</div><div class='val'>" + s.hi + "</div></div>" +
-      "<div class='bd-stat'><div class='lbl'>Unrated</div><div class='val'>" + (s.total - s.rated) + "</div></div>";
+      "<div class='bd-stat'><div class='lbl'>Muscles</div><div class='val'>" + s.total + "</div></div>" +
+      "<div class='bd-stat'><div class='lbl'>Focused</div><div class='val'>" + s.focus + "</div></div>" +
+      "<div class='bd-stat'><div class='lbl'>Trained this week</div><div class='val'>" + s.trained + "</div></div>" +
+      "<div class='bd-stat'><div class='lbl'>Sets this week</div><div class='val'>" + s.sets + "</div></div>";
   }
 
   function syncBodyPanel(){
@@ -4146,12 +4357,13 @@
     if (!host) return;
     var def = bodyMuscleId ? bodyMuscleById(bodyMuscleId) : null;
     if (!def){
-      host.innerHTML = "<h3>Muscle overview</h3>" +
-        "<div class='d'>Select a muscle from the list to see its training volume, recovery, and progress.</div>";
+      host.innerHTML = "<h3>Muscle details</h3>" +
+        "<div class='d'>Select a muscle from the list to see its weekly volume, recovery, and notes.</div>";
       return;
     }
     var rec = bodyMuscle(def.id);
     var training = bodyTrainingStats(def.id);
+    var plan = bodyWeeklyPlan(def.id);
     var recovery = training.daysSince === null
       ? { label:"No training logged", hint:"Log a session to see recovery", cls:"" }
       : training.daysSince === 0
@@ -4172,26 +4384,20 @@
         "</select><button type='button' class='btn primary' data-bd-quick-log>Log set</button></div>"
       : "<button type='button' class='btn' data-bd-add-exercise>Add exercise for " + esc(def.name) + "</button>";
     host.innerHTML = "<h3>" + esc(def.name) + ' <span class="tag">' + esc(def.region) + "</span></h3>" +
-      "<div class='d'>Training volume and recovery use your logged sessions. Rate, efficiency and shape are personal ratings.</div>" +
+      "<div class='d'>Weekly volume comes from your logged sessions, and the target is assigned for you.</div>" +
       "<div class='bd-overview'>" +
-        "<div class='bd-overview-item'><div class='lbl'>Weekly volume</div><div class='val'>" + training.weeklySets + " sets</div><div class='hint'>Last 7 days</div></div>" +
+        "<div class='bd-overview-item'><div class='lbl'>Weekly volume</div><div class='val'>" + training.weeklySets + " sets</div><div class='hint'>This week</div></div>" +
         "<div class='bd-overview-item " + recovery.cls + "'><div class='lbl'>Recovery</div><div class='val'>" + recovery.label + "</div><div class='hint'>" + esc(recovery.hint) + "</div></div>" +
       "</div>" +
-      "<div class='bd-target-row'><label for='bdWeeklyTarget'>Weekly set target</label><input id='bdWeeklyTarget' data-bd-weekly-target type='number' min='0' max='50' step='1' value='" + (rec.weeklyTarget || "") + "' placeholder='Optional'></div>" +
-      "<div class='bd-week-progress'><div data-bd-week-progress style='width:" + (rec.weeklyTarget ? Math.min(100, Math.round(training.weeklySets / rec.weeklyTarget * 100)) : 0) + "%'></div></div>" +
-      "<div class='d' data-bd-week-copy>" + (rec.weeklyTarget ? training.weeklySets + " / " + rec.weeklyTarget + " sets this week" : "Set a target to track weekly progress") + "</div>" +
+      bodyVolumeBlock(plan) +
       "<div class='section-title'>Quick log</div>" + quickLog +
-      "<div class='section-title'>Muscle ratings</div>" +
-      bodyMeterRow(def.id, "rate", "Rate") +
-      bodyMeterRow(def.id, "efficiency", "Efficiency") +
-      bodyMeterRow(def.id, "shape", "Shape") +
-      "<div class='bd-viewbar' style='margin:2px 0 14px'>" +
-        '<button type="button" class="btn small' + (rec.highlight ? " primary" : "") + '" data-bd-hi="' + def.id + '">' +
-          (rec.highlight ? "★ Highlighted — remove" : "☆ Highlight muscle") + "</button>" +
-        '<button type="button" class="btn small ghost" data-bd-clear="' + def.id + '">Reset</button>' +
+      "<div class='bd-viewbar' style='margin:16px 0 14px'>" +
+        '<button type="button" class="btn small' + (rec.focus ? " primary" : "") + '" data-bd-focus="' + def.id + '">' +
+          (rec.focus ? "★ Focus muscle — remove" : "☆ Focus muscle") + "</button>" +
       "</div>" +
-      "<div class='field' style='margin:0'><label>Note</label>" +
-        "<textarea data-bd-note='" + def.id + "' rows='3' maxlength='500' placeholder='e.g. right side lags the left, feels tight after pressing…'>" + esc(rec.note) + "</textarea></div>";
+      "<div class='field' style='margin:0'><label>Notes · one bullet per line</label>" +
+        "<textarea data-bd-note='" + def.id + "' rows='4' maxlength='800' placeholder='e.g. right side lags the left&#10;feel tight after pressing&#10;add 2 sets next week'>" + esc(rec.note) + "</textarea></div>" +
+      '<div data-bd-note-list style="margin-top:10px">' + bodyNotesHTML(rec.note) + "</div>";
     bindBodyPanel(host);
   }
 
@@ -4209,7 +4415,8 @@
     if (!host) return;
     var st = bodyPostureStats();
     host.innerHTML = "<h3>Posture Fix</h3>" +
-      "<div class='d'>Mark the problems you have and set how bad each one is. Score = 100 minus the average severity.</div>" +
+      "<div class='d'>Tap ✓ to mark a problem, then drag its handle to set how bad it is. " +
+      "Score = 100 minus the average severity.</div>" +
       "<div class='bd-stat-row' id='bdPostureStats' style='margin-bottom:14px'></div>" +
       '<div class="bd-list">' + bodyPostureRows() + "</div>" +
       "<div class='field' style='margin:16px 0 0'><label>Posture notes</label>" +
@@ -4235,8 +4442,8 @@
     svg.querySelectorAll(".bd-muscle").forEach(function(g){
       var id = g.getAttribute("data-muscle");
       var rec = bodyMuscle(id);
-      g.classList.toggle("rated", rec.rate > 0);
-      g.classList.toggle("hi", rec.highlight);
+      g.classList.toggle("worked", bodyTrainingStats(id).weeklySets > 0);
+      g.classList.toggle("focus", rec.focus);
       g.classList.toggle("sel", id === bodyMuscleId);
       g.setAttribute("aria-pressed", id === bodyMuscleId ? "true" : "false");
     });
@@ -4306,22 +4513,6 @@
   }
 
   function bindBodyPanel(host){
-    var weeklyTarget = host.querySelector("[data-bd-weekly-target]");
-    if (weeklyTarget){
-      weeklyTarget.addEventListener("input", function(){
-        var target = Math.max(0, Math.min(50, Math.round(parseFloat(weeklyTarget.value) || 0)));
-        var rec = bodyMuscle(bodyMuscleId);
-        rec.weeklyTarget = target;
-        saveState();
-        var fill = host.querySelector("[data-bd-week-progress]");
-        var copy = host.querySelector("[data-bd-week-copy]");
-        if (fill) fill.style.width = (target ? Math.min(100, Math.round(bodyTrainingStats(bodyMuscleId).weeklySets / target * 100)) : 0) + "%";
-        if (copy){
-          var count = bodyTrainingStats(bodyMuscleId).weeklySets;
-          copy.textContent = target ? count + " / " + target + " sets this week" : "Set a target to track weekly progress";
-        }
-      });
-    }
     var quickExercise = host.querySelector("[data-bd-quick-exercise]");
     if (quickExercise){
       quickExercise.addEventListener("change", function(){ bodyQuickLogExerciseId = quickExercise.value; });
@@ -4346,50 +4537,31 @@
         renderMuscleRows();
       });
     }
-    host.querySelectorAll("[data-bd-range]").forEach(function(el){
-      el.addEventListener("input", function(){
-        var id = el.getAttribute("data-bd-range");
-        var key = el.getAttribute("data-bd-key");
-        var v = clampPct(el.value);
-        bodyMuscle(id)[key] = v;
-        saveState();
-        var out = host.querySelector('[data-bd-out="' + id + '-' + key + '"]');
-        if (out) out.textContent = v;
-        syncBodyFigure();
-        syncBodyStats();
-        syncBodyList();
-      });
-    });
     var note = host.querySelector("[data-bd-note]");
     if (note){
+      var noteList = host.querySelector("[data-bd-note-list]");
       note.addEventListener("input", function(){
-        bodyMuscle(note.getAttribute("data-bd-note")).note = note.value;
+        var id = note.getAttribute("data-bd-note");
+        bodyMuscle(id).note = note.value;
         saveState();
+        // Live bullets, without re-rendering the textarea the user is typing in.
+        if (noteList) noteList.innerHTML = bodyNotesHTML(note.value);
+        syncBodyFocus();
       });
     }
-    var hi = host.querySelector("[data-bd-hi]");
-    if (hi){
-      hi.addEventListener("click", function(){
-        var id = hi.getAttribute("data-bd-hi");
-        bodyMuscle(id).highlight = !bodyMuscle(id).highlight;
+    var focusBtn = host.querySelector("[data-bd-focus]");
+    if (focusBtn){
+      focusBtn.addEventListener("click", function(){
+        var id = focusBtn.getAttribute("data-bd-focus");
+        var rec = bodyMuscle(id);
+        rec.focus = !rec.focus;
         saveState();
+        syncBodyFocus();
         syncBodyPanel();
-        syncBodyFigure();
         syncBodyStats();
         syncBodyList();
-      });
-    }
-    var clr = host.querySelector("[data-bd-clear]");
-    if (clr){
-      clr.addEventListener("click", function(){
-        var id = clr.getAttribute("data-bd-clear");
-        bodyStore().muscles[id] = { rate:0, efficiency:0, shape:0, highlight:false, note:"" };
-        saveState();
-        syncBodyPanel();
         syncBodyFigure();
-        syncBodyStats();
-        syncBodyList();
-        showToast("Muscle reset");
+        showToast(rec.focus ? "Focus muscle on" : "Focus muscle off");
       });
     }
   }
@@ -4408,6 +4580,7 @@
       });
     });
     host.querySelectorAll("[data-bd-prange]").forEach(function(el){
+      lockRange(el);
       el.addEventListener("input", function(){
         var id = el.getAttribute("data-bd-prange");
         var name = null;
@@ -4697,7 +4870,7 @@
         var idx = state.workouts.findIndex(function(w){ return w.id === incoming.id; });
         if (idx === -1) state.workouts.push(incoming); else state.workouts[idx] = incoming;
       });
-      // Body muscle ratings + posture status: incoming values win per muscle.
+      // Body focus muscles + posture status: incoming values win per muscle.
       var incomingBody = normalizeBody(pendingImportPayload.body);
       var mergedBody = normalizeBody(state.body);
       Object.keys(incomingBody.muscles).forEach(function(id){ mergedBody.muscles[id] = incomingBody.muscles[id]; });
