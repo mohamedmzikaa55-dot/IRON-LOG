@@ -79,6 +79,10 @@
 
   * { box-sizing: border-box; }
   html, body { height: 100%; }
+  /* Kill native pull-to-refresh / overscroll chaining: the OS gesture used to
+     blank the page and shrink the bottom bar on touch devices. */
+  html, body { overscroll-behavior: none; }
+  body { overscroll-behavior-y: none; }
   html { scroll-padding-top: env(safe-area-inset-top, 0px); }
   body {
     margin: 0;
@@ -3398,7 +3402,7 @@
   // compares dist/version.json with its own build id and asks the browser for
   // the newest worker. A newer build means: save a backup, activate the new
   // worker, reload into it. No uninstall, no clearing site data.
-  var BUILD_ID = (typeof "iron-log-2026-10-02T11-44-53-muqwborg" !== "undefined") ? String("iron-log-2026-10-02T11-44-53-muqwborg") : "dev";
+  var BUILD_ID = (typeof "iron-log-2026-10-03T10-42-55-mus9jua5" !== "undefined") ? String("iron-log-2026-10-03T10-42-55-mus9jua5") : "dev";
   var APP_VERSION = "v10.0 — Body tab, offline + auto-update (" + BUILD_ID.slice(-8) + ")";
   var SW_CACHE_PREFIX = "iron-log-";
   var UPDATE_ATTEMPTS = "iron-log-update-attempts";
